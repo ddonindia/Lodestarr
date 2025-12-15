@@ -1,0 +1,8 @@
+# Test artifacts
+# Coverage
+coverage/
+.nyc_output/
+
+# Test results
+test-results/
+junit.xml

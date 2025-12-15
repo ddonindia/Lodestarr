@@ -23,6 +23,38 @@ The primary motivation behind Lodestarr is to provide a fresh, modern alternativ
 *   **Torrent Management**: Download capabilities and magnet link support.
 *   **Persistent Configuration**: Easy management of indexers.
 
+## Screenshots
+
+### Dashboard (Dark Theme)
+![Dashboard](web/tests/ui/screenshots/01-dashboard.png)
+
+### Search Interface
+![Search View](web/tests/ui/screenshots/02-search-view.png)
+
+### Settings & Indexer Management
+![Settings View](web/tests/ui/screenshots/03-settings-view.png)
+
+### Add Indexer Form
+![Add Indexer Form](web/tests/ui/screenshots/04-add-indexer-form.png)
+
+### Light Theme
+![Light Theme](web/tests/ui/screenshots/05-light-theme.png)
+
+### Responsive Design
+
+<details>
+<summary>Tablet & Mobile Views</summary>
+
+**Tablet View (768px)**
+
+![Tablet View](web/tests/ui/screenshots/07-tablet-view.png)
+
+**Mobile View (375px)**
+
+![Mobile View](web/tests/ui/screenshots/08-mobile-view.png)
+
+</details>
+
 > **Work in Progress**: This project is currently in active development (v0.4.2.0). Features and APIs may change.
 
 ## Roadmap

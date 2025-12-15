@@ -13,8 +13,15 @@ fn main() {
     if !dist_path.exists() {
         println!("cargo:warning=Web assets missing (web/dist). Building frontend...");
         
+        // Use npm.cmd on Windows, npm on Unix-like systems
+        let npm_cmd = if cfg!(target_os = "windows") {
+            "npm.cmd"
+        } else {
+            "npm"
+        };
+        
         // npm install
-        let install_status = Command::new("npm")
+        let install_status = Command::new(npm_cmd)
             .args(&["install"])
             .current_dir("web")
             .status()
@@ -27,7 +34,7 @@ fn main() {
         // npm run build
         // Note: We use the full path to tsc via npm run or we can rely on npm's path resolution.
         // If 'npm run build' fails, we might need to adjust the command in package.json
-        let build_status = Command::new("npm")
+        let build_status = Command::new(npm_cmd)
             .args(&["run", "build"])
             .current_dir("web")
             .status()
