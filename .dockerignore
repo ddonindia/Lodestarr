@@ -1,0 +1,7 @@
+target/
+**/*.rs.bk
+web/node_modules
+web/dist
+.git
+.gitignore
+Dockerfile
