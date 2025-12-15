@@ -1,5 +1,10 @@
 # Lodestarr
 
+<p align="center">
+  <img src="web/public/icon.png" alt="Lodestarr Icon" width="128" height="128" />
+</p>
+
+
 Lodestarr is a powerful, lightweight proxy for Torznab indexers. It aggregates search results from multiple sources (like Jackett, Prowlarr, or direct implementations) and provides a unified search API and a modern Web UI.
 
 ## Why Lodestarr?
