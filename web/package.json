@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "jest --config tests/ui/jest.config.cjs",
+    "test:headed": "set HEADLESS=false&& jest --config tests/ui/jest.config.cjs",
+    "test:watch": "jest --config tests/ui/jest.config.cjs --watch"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -22,7 +25,9 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/jest": "^29.5.14",
     "@types/node": "^24.10.1",
+    "@types/puppeteer": "^7.0.4",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -31,8 +36,11 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jest": "^29.7.0",
     "postcss": "^8.5.6",
+    "puppeteer": "^24.1.0",
     "tailwindcss": "^4.1.18",
+    "ts-jest": "^29.2.5",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
