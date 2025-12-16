@@ -83,8 +83,63 @@ The executable will be located at `target/release/lodestarr`.
 
 ## Docker
 
-Lodestarr is available as a Docker container.
+Lodestarr is available as a pre-built multi-platform Docker image hosted on GitHub Container Registry.
 
+### Using Pre-built Images
+
+Pre-built images are automatically published for both **linux/amd64** and **linux/arm64/v8** architectures, supporting:
+- Standard x86_64/AMD64 systems (Intel/AMD processors)
+- ARM64 devices (Raspberry Pi 4+, AWS Graviton, Oracle Cloud ARM, Apple Silicon Macs)
+
+Pull the latest image:
+```bash
+docker pull ghcr.io/ddonindia/lodestarr:latest
+```
+
+Run with basic configuration:
+```bash
+docker run -d \
+  --name lodestarr \
+  -p 3420:3420 \
+  ghcr.io/ddonindia/lodestarr:latest
+```
+
+Run with persistent storage (recommended):
+```bash
+docker run -d \
+  --name lodestarr \
+  -p 3420:3420 \
+  -v lodestarr-data:/root/.config/lodestarr \
+  ghcr.io/ddonindia/lodestarr:latest
+```
+
+### Docker Compose
+
+Create a `docker-compose.yml`:
+```yaml
+version: '3.8'
+services:
+  lodestarr:
+    image: ghcr.io/ddonindia/lodestarr:latest
+    container_name: lodestarr
+    ports:
+      - "3420:3420"
+    volumes:
+      - lodestarr-data:/root/.config/lodestarr
+    restart: unless-stopped
+
+volumes:
+  lodestarr-data:
+```
+
+Start the service:
+```bash
+docker-compose up -d
+```
+
+### Building from Source
+
+If you prefer to build the image locally:
 ```bash
 # Build the image
 docker build -t lodestarr .
@@ -92,9 +147,24 @@ docker build -t lodestarr .
 # Run with persistence
 docker run -d \
   -p 3420:3420 \
-  -v $(pwd)/config:/root/.config/lodestarr \
+  -v lodestarr-data:/root/.config/lodestarr \
   lodestarr
 ```
+
+### Environment Variables
+
+You can customize the server behavior with environment variables:
+```bash
+docker run -d \
+  --name lodestarr \
+  -p 3420:3420 \
+  -e RUST_LOG=debug \
+  -v lodestarr-data:/root/.config/lodestarr \
+  ghcr.io/ddonindia/lodestarr:latest
+```
+
+Access the Web UI at http://localhost:3420
+
 
 ## Usage
 
