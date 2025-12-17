@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  lodestarr:
+    build: .
+    image: lodestarr:latest
+    container_name: lodestarr
+    ports:
+      - "3420:3420"
+    volumes:
+      - ~/.config/lodestarr:/root/.config/lodestarr
+    restart: unless-stopped
