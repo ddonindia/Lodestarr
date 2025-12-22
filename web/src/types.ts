@@ -10,6 +10,8 @@ export interface TorrentResult {
     Seeders: number | null;
     Peers: number | null;
     Indexer: string | null;
+    IndexerId?: string | null;  // Added for proxy download URLs
+    Magnet?: string;  // Magnet link
 }
 
 export interface IndexerDefinition {
@@ -20,47 +22,6 @@ export interface IndexerDefinition {
     type: string;
     encoding?: string;
     links?: string[];
+    legacylinks?: string[];
     enabled?: boolean; // UI-only property for toggle state
-}
-
-export interface IndexerHealth {
-    id: string;
-    name: string;
-    status: 'healthy' | 'failing' | 'unknown';
-    lastChecked: string | null;
-    responseTime: number | null;
-    errorMessage: string | null;
-    successRate: number;
-}
-
-export interface SearchStats {
-    totalSearches: number;
-    recentSearches: Array<{
-        query: string;
-        indexer: string;
-        timestamp: string;
-        resultCount: number;
-    }>;
-    searchesOverTime: Array<{
-        date: string;
-        count: number;
-    }>;
-}
-
-export interface SystemStats {
-    indexersLoaded: number;
-    indexersHealthy: number;
-    indexersFailing: number;
-    version: string;
-    uptime: number;
-    averageResponseTime: number;
-}
-
-export interface UserSettings {
-    apiKey: string;
-    baseUrl: string;
-    theme: 'dark' | 'light' | 'auto';
-    defaultIndexer: string | null;
-    resultsPerPage: number;
-    searchTimeout: number;
 }

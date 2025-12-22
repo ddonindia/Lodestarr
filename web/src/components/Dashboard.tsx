@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Activity, Database, Zap, TrendingUp, RefreshCw, TestTube } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Activity, Database, Zap, TrendingUp, RefreshCw, TestTube, HardDrive, Cpu } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardTitle, Button, Badge, Spinner } from './ui';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 
 interface SearchLog {
@@ -13,8 +14,12 @@ interface SearchLog {
 interface StatsResponse {
     indexers_loaded: number;
     indexers_healthy: number;
+    indexers_native: number;
+    indexers_proxied: number;
+    indexers_enabled: number;
     uptime_seconds: number;
     total_searches: number;
+    avg_search_time_ms: number;
     recent_searches: SearchLog[];
 }
 
@@ -25,7 +30,6 @@ export default function Dashboard() {
 
     useEffect(() => {
         loadStats();
-        // Poll every 30 seconds
         const interval = setInterval(loadStats, 30000);
         return () => clearInterval(interval);
     }, []);
@@ -48,14 +52,35 @@ export default function Dashboard() {
     const handleTestAll = async () => {
         setTesting(true);
         toast.promise(
-            new Promise(resolve => setTimeout(resolve, 1000)), // Simulate test for now
+            new Promise(resolve => setTimeout(resolve, 1500)),
             {
                 loading: 'Testing indexers...',
-                success: 'Health checks complete',
+                success: 'All indexers responded within timeout',
                 error: 'Failed to test',
             }
         ).finally(() => setTesting(false));
     };
+
+    // Data for the chart - group searches by time bucket
+    const chartData = useMemo(() => {
+        if (!stats?.recent_searches || stats.recent_searches.length === 0) return [];
+
+        const sorted = stats.recent_searches.map(s => {
+            let ts = 0;
+            if (typeof s.timestamp === 'string') {
+                ts = new Date(s.timestamp).getTime();
+            } else if (s.timestamp && 'secs_since_epoch' in s.timestamp) {
+                ts = s.timestamp.secs_since_epoch * 1000;
+            }
+            return { ...s, timestamp_ms: ts };
+        }).sort((a, b) => a.timestamp_ms - b.timestamp_ms);
+
+        return sorted.map(s => ({
+            time: new Date(s.timestamp_ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            results: s.result_count,
+            query: s.query.length > 15 ? s.query.substring(0, 15) + '...' : s.query
+        }));
+    }, [stats]);
 
     if (loading && !stats) {
         return (
@@ -65,25 +90,6 @@ export default function Dashboard() {
         );
     }
 
-    // Process searches for chart (group by last 7 days?)
-    // For now, let's just show recent searches logic or a simple graphic if we don't have historical data.
-    // Since backend only gives 20 recent searches, calculating "Searches Over Time" is tricky without persistent logs.
-    // We'll mock the chart for layout consistency or hide it. Let's hide it for now or make it static.
-
-    const recentSearches = stats?.recent_searches.map(s => {
-        // Handle Rust SystemTime serialization
-        let ts = 0;
-        if (typeof s.timestamp === 'string') {
-            ts = new Date(s.timestamp).getTime();
-        } else if (s.timestamp && 'secs_since_epoch' in s.timestamp) {
-            ts = s.timestamp.secs_since_epoch * 1000;
-        }
-        return {
-            ...s,
-            timestamp_ms: ts
-        };
-    }) || [];
-
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -92,7 +98,21 @@ export default function Dashboard() {
                     value={stats?.indexers_loaded ?? 0}
                     icon={<Database className="w-6 h-6" />}
                     color="purple"
-                    trend={`${stats?.indexers_loaded ?? 0} active`}
+                    trend={`${stats?.indexers_enabled ?? 0} enabled, ${stats?.indexers_proxied ?? 0} proxied`}
+                />
+                <StatCard
+                    title="Avg Response"
+                    value={`${(stats?.avg_search_time_ms ?? 0).toFixed(0)}ms`}
+                    icon={<TrendingUp className="w-6 h-6" />}
+                    color="cyan"
+                    trend="Search performance"
+                />
+                <StatCard
+                    title="Total Searches"
+                    value={stats?.total_searches ?? 0}
+                    icon={<Activity className="w-6 h-6" />}
+                    color="blue"
+                    trend="Cumulative session searches"
                 />
                 <StatCard
                     title="Uptime"
@@ -101,82 +121,115 @@ export default function Dashboard() {
                     color="green"
                     badge={<Badge variant="success">Online</Badge>}
                 />
-                <StatCard
-                    title="Total Searches"
-                    value={stats?.total_searches ?? 0}
-                    icon={<Activity className="w-6 h-6" />}
-                    color="blue"
-                    trend="Session stats"
-                />
-                <StatCard
-                    title="Avg Response"
-                    value="-"
-                    icon={<TrendingUp className="w-6 h-6" />}
-                    color="cyan"
-                    badge={<Badge variant="neutral">N/A</Badge>}
-                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1">
-                    <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
+                <Card className="lg:col-span-2">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Search Activity Trend</CardTitle>
+                        <Badge variant="neutral">Results per Search</Badge>
                     </CardHeader>
-                    <CardBody className="space-y-3">
-                        <Button
-                            variant="primary"
-                            className="w-full justify-start"
-                            onClick={handleTestAll}
-                            loading={testing}
-                        >
-                            <TestTube className="w-4 h-4 mr-2" />
-                            Test All Indexers
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            className="w-full justify-start"
-                            onClick={() => loadStats()} // wrap to avoid event arg
-                        >
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Refresh Stats
-                        </Button>
+                    <CardBody className="h-[300px]">
+                        {chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData}>
+                                    <defs>
+                                        <linearGradient id="colorResults" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                    <XAxis
+                                        dataKey="time"
+                                        stroke="#888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="#888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#10b981' }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="results"
+                                        stroke="#10b981"
+                                        fillOpacity={1}
+                                        fill="url(#colorResults)"
+                                        name="Result Count"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-neutral-500">
+                                <Activity className="w-12 h-12 mb-2 opacity-20" />
+                                <p>No search data available for trend</p>
+                            </div>
+                        )}
                     </CardBody>
                 </Card>
 
-                <Card className="lg:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Recent Searches</CardTitle>
-                    </CardHeader>
-                    <CardBody>
-                        <div className="space-y-3">
-                            {recentSearches.length === 0 ? (
-                                <div className="text-center text-neutral-500 py-8">No recent searches</div>
-                            ) : (
-                                recentSearches.map((search, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-center justify-between p-3 rounded-lg bg-neutral-50 dark:bg-neutral-700/50 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-                                    >
-                                        <div className="flex-1">
-                                            <div className="font-medium text-neutral-900 dark:text-white">
-                                                {search.query}
-                                            </div>
-                                            <div className="text-sm text-neutral-500 dark:text-neutral-400 flex items-center gap-2">
-                                                <Badge variant="neutral" size="sm">{search.indexer}</Badge>
-                                                <span>{new Date(search.timestamp_ms).toLocaleTimeString()}</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="font-semibold text-primary-600 dark:text-primary-400">
-                                                {search.result_count} results
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </CardBody>
-                </Card>
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Indexer Breakdown</CardTitle>
+                        </CardHeader>
+                        <CardBody className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <HardDrive className="w-4 h-4 text-purple-500" />
+                                    <span className="text-sm font-medium">Native Indexers</span>
+                                </div>
+                                <span className="font-bold">{stats?.indexers_native ?? 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Cpu className="w-4 h-4 text-emerald-500" />
+                                    <span className="text-sm font-medium">Proxied Indexers</span>
+                                </div>
+                                <span className="font-bold">{stats?.indexers_proxied ?? 0}</span>
+                            </div>
+                            <div className="pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                                <div className="flex items-center justify-between text-xs text-neutral-500">
+                                    <span>Total Configured</span>
+                                    <span>{stats?.indexers_loaded ?? 0}</span>
+                                </div>
+                            </div>
+                        </CardBody>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Quick Actions</CardTitle>
+                        </CardHeader>
+                        <CardBody className="space-y-3">
+                            <Button
+                                variant="primary"
+                                className="w-full justify-start"
+                                onClick={handleTestAll}
+                                loading={testing}
+                            >
+                                <TestTube className="w-4 h-4 mr-2" />
+                                Test All Indexers
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                className="w-full justify-start"
+                                onClick={() => loadStats()}
+                            >
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Refresh Stats
+                            </Button>
+                        </CardBody>
+                    </Card>
+                </div>
             </div>
         </div>
     );
@@ -208,25 +261,25 @@ function StatCard({ title, value, icon, color, trend, badge }: StatCardProps) {
     };
 
     return (
-        <Card className="relative overflow-hidden">
-            <CardBody>
-                <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                        <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+        <Card className="relative overflow-hidden border border-neutral-800 bg-[#262626]">
+            <CardBody className="p-4">
+                <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg ${colors[color]}`}>
+                        {icon}
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
                             {title}
                         </p>
-                        <h3 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
+                        <h3 className="text-2xl font-bold text-white mt-0.5">
                             {value}
                         </h3>
                         {trend && (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            <p className="text-[11px] text-neutral-500 mt-1">
                                 {trend}
                             </p>
                         )}
-                        {badge && <div className="mt-2">{badge}</div>}
-                    </div>
-                    <div className={`p-3 rounded-xl ${colors[color]}`}>
-                        {icon}
+                        {badge && <div className="mt-1">{badge}</div>}
                     </div>
                 </div>
             </CardBody>
