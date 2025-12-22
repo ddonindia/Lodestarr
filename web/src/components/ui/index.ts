@@ -1,6 +1,6 @@
 // UI Components Barrel Export
 export { Button } from './Button';
-export { Card, CardHeader, CardBody, CardTitle } from './Card';
-export { Modal } from './Modal';
+export { Card, CardBody, CardHeader, CardTitle } from './Card';
 export { Badge } from './Badge';
-export { Spinner, PageSpinner } from './Spinner';
+export { MirrorSelector } from './MirrorSelector';
+export { Spinner } from './Spinner';
