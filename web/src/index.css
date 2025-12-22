@@ -1,22 +1,33 @@
 @import "tailwindcss";
 
+/* Google Fonts for font options */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap');
+
 :root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Default font */
+  font-family: var(--theme-font, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   line-height: 1.5;
   font-weight: 400;
 
-  /* Dark theme (default) */
-  --color-bg-primary: #0a0a0a;
-  --color-bg-secondary: #171717;
-  --color-bg-tertiary: #262626;
-  --color-border: #404040;
-  --color-text-primary: #fafafa;
-  --color-text-secondary: #a3a3a3;
-  --color-accent: #10b981;
+  /* Theme CSS Variables - set dynamically by ThemeContext */
+  --theme-bg: #0a0a0a;
+  --theme-card: #171717;
+  --theme-border: #404040;
+  --theme-accent: #10b981;
+  --theme-font: 'Inter', system-ui, sans-serif;
+
+  /* Derived colors - computed from theme variables */
+  --color-bg-primary: var(--theme-bg);
+  --color-bg-secondary: var(--theme-card);
+  --color-bg-tertiary: color-mix(in srgb, var(--theme-card) 80%, white 20%);
+  --color-border: var(--theme-border);
+  --color-accent: var(--theme-accent);
+  --color-accent-hover: color-mix(in srgb, var(--theme-accent) 85%, white 15%);
+  --color-accent-muted: color-mix(in srgb, var(--theme-accent) 20%, transparent 80%);
 
   color-scheme: dark;
   background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  color: #fafafa;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,19 +35,23 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Light theme */
-:root.light {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f5f5f5;
-  --color-bg-tertiary: #e5e5e5;
-  --color-border: #d4d4d4;
-  --color-text-primary: #0a0a0a;
-  --color-text-secondary: #737373;
-  --color-accent: #059669;
-
-  color-scheme: light;
+/* Dark mode text colors */
+:root.dark {
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a3a3a3;
+  color-scheme: dark;
+  color: #fafafa;
 }
 
+/* Light mode overrides */
+:root.light {
+  --color-text-primary: #0a0a0a;
+  --color-text-secondary: #737373;
+  color-scheme: light;
+  color: #0a0a0a;
+}
+
+/* Smooth transitions for theme changes */
 * {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
@@ -45,6 +60,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  font-family: var(--theme-font, inherit);
 }
 
 #root {
@@ -52,7 +68,45 @@ body {
   min-height: 100vh;
 }
 
-/* Scrollbar styling */
+/* Accent color utility classes */
+.bg-accent {
+  background-color: var(--color-accent);
+}
+
+.bg-accent-hover:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.bg-accent-muted {
+  background-color: var(--color-accent-muted);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+.border-accent {
+  border-color: var(--color-accent);
+}
+
+.ring-accent {
+  --tw-ring-color: var(--color-accent);
+}
+
+/* Theme background utilities */
+.bg-theme {
+  background-color: var(--theme-bg);
+}
+
+.bg-theme-card {
+  background-color: var(--theme-card);
+}
+
+.border-theme {
+  border-color: var(--theme-border);
+}
+
+/* Scrollbar styling using theme colors */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
