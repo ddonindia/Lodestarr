@@ -1,93 +1,88 @@
 import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext';
+
 import Search from './components/Search';
 import Dashboard from './components/Dashboard';
-import Indexers from './components/Indexers';
+import Indexers from './components/NativeIndexers'; // Using NativeIndexers as main Indexers view
 import Settings from './components/Settings';
+import RecentActivity from './components/RecentActivity';
+import Sidebar from './components/Sidebar';
 
 function App() {
-  const [view, setView] = useState<'dashboard' | 'search' | 'indexers' | 'health' | 'settings'>('dashboard');
-  const { theme, setTheme } = useTheme();
+  const [view, setView] = useState<'dashboard' | 'search' | 'indexers' | 'settings' | 'activity'>('dashboard');
+  const { settings, setColorMode, resolvedMode } = useTheme();
 
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+    const nextMode = settings.colorMode === 'dark' ? 'light' : settings.colorMode === 'light' ? 'auto' : 'dark';
+    setColorMode(nextMode);
+  };
+
+  const getThemeIcon = () => {
+    if (settings.colorMode === 'auto') return <Monitor size={20} />;
+    return resolvedMode === 'dark' ? <Moon size={20} /> : <Sun size={20} />;
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white font-sans">
-      <header className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 py-4 px-6 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('dashboard')}>
-            <img src="/icon.png" alt="Lodestarr" className="w-8 h-8 rounded-lg" />
-            <h1 className="text-xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
-              Lodestarr
-            </h1>
+    <div
+      className="min-h-screen font-sans transition-colors"
+      style={{
+        backgroundColor: 'var(--theme-bg)',
+        color: 'var(--theme-text)',
+      }}
+    >
+      <Sidebar currentView={view} setView={setView} />
+
+      {/* Main Content Area - Shifted right by 64 (16rem) to account for sidebar */}
+      <main className="lg:pl-64 min-h-screen">
+        {/* Top Bar for Mobile / Global Actions (Search, etc - can be added later) */}
+        <header
+          className="h-16 border-b flex items-center justify-between px-8 sticky top-0 z-40 backdrop-blur"
+          style={{
+            backgroundColor: 'var(--theme-card)',
+            borderColor: 'var(--theme-border)',
+            color: 'var(--theme-text)'
+          }}
+        >
+          <h2 className="text-lg font-semibold capitalize opacity-90">
+            {view}
+          </h2>
+          {/* Top Right Actions */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors text-neutral-400 hover:text-white"
+              title={`Toggle theme mode (current: ${settings.colorMode})`}
+            >
+              {getThemeIcon()}
+            </button>
           </div>
+        </header>
 
-          <nav className="flex gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-lg">
-            <NavButton active={view === 'dashboard'} onClick={() => setView('dashboard')}>Dashboard</NavButton>
-            <NavButton active={view === 'search'} onClick={() => setView('search')}>Search</NavButton>
-            {/* <NavButton active={view === 'indexers'} onClick={() => setView('indexers')}>Indexers</NavButton> */}
-            <NavButton active={view === 'settings'} onClick={() => setView('settings')}>Settings</NavButton>
-          </nav>
-
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5 text-yellow-500" />
-            ) : (
-              <Moon className="w-5 h-5 text-neutral-700" />
-            )}
-          </button>
+        <div className="p-8 max-w-[1600px] mx-auto">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {view === 'dashboard' && <Dashboard />}
+            {view === 'search' && <Search />}
+            {view === 'indexers' && <Indexers />}
+            {view === 'settings' && <Settings />}
+            {view === 'activity' && <RecentActivity />}
+          </div>
         </div>
-      </header>
-
-      <main className="py-8">
-        {view === 'dashboard' && <Dashboard />}
-        {view === 'search' && <Search />}
-        {view === 'indexers' && <Indexers />}
-        {view === 'health' && <HealthPlaceholder />}
-        {view === 'settings' && <Settings />}
       </main>
 
       <Toaster
-        position="top-right"
+        position="bottom-right"
         toastOptions={{
-          className: 'dark:bg-neutral-800 dark:text-white',
+          style: {
+            backgroundColor: '#262626',
+            color: '#fafafa',
+            borderColor: '#404040',
+            border: '1px solid #404040',
+          },
           duration: 3000,
         }}
       />
-    </div>
-  );
-}
-
-function NavButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${active
-        ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm'
-        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800'
-        }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-
-function HealthPlaceholder() {
-  return (
-    <div className="max-w-6xl mx-auto px-6">
-      <div className="text-center text-neutral-500 dark:text-neutral-400 mt-20">
-        <h2 className="text-2xl font-bold mb-2">Health Monitoring</h2>
-        <p>Coming soon - Monitor indexer health status</p>
-      </div>
     </div>
   );
 }
