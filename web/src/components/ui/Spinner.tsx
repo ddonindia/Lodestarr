@@ -16,11 +16,3 @@ export function Spinner({ size = 'md', className }: SpinnerProps) {
         <Loader2 className={`${sizes[size]} animate-spin text-neutral-500 ${className || ''}`} />
     );
 }
-
-export function PageSpinner() {
-    return (
-        <div className="flex items-center justify-center min-h-[400px]">
-            <Spinner size="lg" />
-        </div>
-    );
-}

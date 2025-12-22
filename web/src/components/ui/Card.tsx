@@ -11,10 +11,16 @@ export function Card({ children, className, hover = false }: CardProps) {
     return (
         <div
             className={clsx(
-                'bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm',
-                hover && 'hover:shadow-md hover:border-neutral-300 dark:hover:border-neutral-600 transition-all cursor-pointer',
+                'rounded-xl shadow-sm transition-colors',
+                hover && 'hover:shadow-md transition-all cursor-pointer',
                 className
             )}
+            style={{
+                backgroundColor: 'var(--theme-card)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: 'var(--theme-border)',
+            }}
         >
             {children}
         </div>
@@ -23,7 +29,10 @@ export function Card({ children, className, hover = false }: CardProps) {
 
 export function CardHeader({ children, className }: { children: ReactNode; className?: string }) {
     return (
-        <div className={clsx('px-6 py-4 border-b border-neutral-200 dark:border-neutral-700', className)}>
+        <div
+            className={clsx('px-6 py-4', className)}
+            style={{ borderBottom: '1px solid var(--theme-border)' }}
+        >
             {children}
         </div>
     );
@@ -39,7 +48,7 @@ export function CardBody({ children, className }: { children: ReactNode; classNa
 
 export function CardTitle({ children, className }: { children: ReactNode; className?: string }) {
     return (
-        <h3 className={clsx('text-lg font-semibold text-neutral-900 dark:text-white', className)}>
+        <h3 className={clsx('text-lg font-semibold', className)}>
             {children}
         </h3>
     );
