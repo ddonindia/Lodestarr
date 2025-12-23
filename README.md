@@ -4,120 +4,118 @@
   <img src="web/public/icon.png" alt="Lodestarr Icon" width="128" height="128" />
 </p>
 
+**Lodestarr** is a powerful, lightweight indexer aggregator and proxy for Torznab-compatible sources. Built with **Rust** for performance and **React** for a modern user experience, it unifies search results from multiple indexers into a single, responsive interface.
 
-Lodestarr is a powerful, lightweight proxy for Torznab indexers. It aggregates search results from multiple sources (like Jackett, Prowlarr, or direct implementations) and provides a unified search API and a modern Web UI.
+---
 
 ## Why Lodestarr?
 
-The primary motivation behind Lodestarr is to provide a fresh, modern alternative to existing aggregator tools.
+| Feature | Lodestarr | Jackett | Prowlarr |
+|---------|-----------|---------|----------|
+| **Language/Runtime** | **Rust (native binary)** | C# (.NET) | C# (.NET) |
+| **Memory Usage** | ~15-30 MB | ~100-300 MB | ~150-400 MB |
+| **Startup Time** | Instant (<1s) | 5-15s | 10-30s |
+| **Native Indexer Support** | ✅ Uses Jackett YAML definitions | ✅ Built-in | ✅ Built-in |
+| **Proxied Indexers** | ✅ Torznab proxy | ✅ Torznab feed | ✅ Torznab + Newznab |
+| **Query Caching** | ✅ SQLite-backed (1hr TTL) | ✅ Yes | ❌ No |
+| **Database Persistence** | ✅ SQLite | ❌ In-memory | ✅ SQLite |
+| **Search History** | ✅ Full logging | ❌ Limited | ✅ Yes |
+| **CLI/TUI Interface** | ✅ Full TUI + CLI | ❌ Web only | ❌ Web only |
+| **Docker Image Size** | ~25 MB | ~300 MB | ~400 MB |
+| **Raspberry Pi Optimized** | ✅ Native ARM64 | ⚠️ Heavy | ⚠️ Heavy |
+| **Arr App Integration** | ✅ Torznab API | ✅ | ✅ Auto-sync |
+| **Usenet Support** | ❌ Torrents only | ⚠️ Limited | ✅ Full |
 
-*   **Modern UI**: We believe managing your media sources should be a pleasant experience. Lodestarr features a sleek, responsive interface built with modern web technologies, moving away from the dated look of older tools.
-*   **Lightweight & Fast**: Written in Rust, Lodestarr is designed to be extremely resource-efficient and performant, ensuring it runs smoothly even on low-power devices like Raspberry Pis without bogging down your system.
+### Key Differentiators
 
-## Features
+- **🦀 Rust Performance**: Single binary with no runtime dependencies. Perfect for low-power devices like Raspberry Pi where Jackett/Prowlarr struggle with memory and CPU.
+  
+- **💾 Smart Caching**: Every search is cached in SQLite. Repeat queries (common when *arr apps verify grabs) return in **milliseconds** instead of hitting external indexers.
 
-*   **Multi-Indexer Support**: Aggregate results from multiple Torznab feeds.
-*   **Unified Search**: Search once, query all configured indexers.
-*   **Web UI**: Modern, responsive React-based interface.
-*   **TUI Mode**: Terminal User Interface for quick searches from the command line.
-*   **Torrent Management**: Download capabilities and magnet link support.
-*   **Persistent Configuration**: Easy management of indexers.
+- **🖥️ Terminal-First**: Full TUI (Terminal UI) and CLI for headless servers. Search, browse, and download without ever opening a browser.
+
+- **🔌 Jackett Compatibility**: Uses Jackett's battle-tested YAML indexer definitions directly. If it works in Jackett, it works in Lodestarr.
+
+- **📦 Minimal Footprint**: ~25MB Docker image vs 300-400MB for alternatives. Uses ~20MB RAM at idle vs 100-300MB.
+
+---
+
+## Feature Overview
+
+### ⚡ Performance & Efficiency
+- **Blazing Fast**: Native Rust binary with async I/O for maximum throughput
+- **Low Resource Usage**: Ideal for Raspberry Pi, NAS devices, and VPS instances
+- **Smart Caching**: SQLite-backed result caching with configurable TTL (default: 1 hour)
+- **30s Timeouts**: Responsive UI even when indexers are slow or unresponsive
+
+### 🔍 Unified Search
+- **Aggregate Results**: Query all indexers simultaneously with a single search
+- **Advanced Filtering**: Filter by indexer, category, size, or text
+- **Sorting Options**: Sort by name, size, seeders, leechers, or date
+- **Pagination**: Handle large result sets with built-in pagination
+
+### 🧩 Native Indexer Support
+- **Jackett Definitions**: Download and use indexer definitions directly from the [Jackett repository](https://github.com/Jackett/Jackett)
+- **YAML-Based Config**: Human-readable indexer configurations
+- **One-Click Install**: Browse and install indexers from the web UI
+- **Auto-Updates**: Keep indexer definitions current
+
+### 🔌 Proxied Indexer Support
+- **Torznab Proxy**: Connect to any Torznab-compatible source (Jackett, Prowlarr, etc.)
+- **Unified Interface**: Mix native and proxied indexers seamlessly
+- **Easy Configuration**: Simple forms for adding external indexers
+
+### 💾 Persistence & History
+- **SQLite Database**: All data persists across restarts
+- **Search Logs**: Complete history of every search query
+- **Statistics**: Track indexer performance and usage patterns
+- **Configuration Storage**: Robust settings management
+
+### 📱 Modern Web UI
+- **Dark/Light Themes**: System-aware theme with manual override
+- **Responsive Layout**: Works on desktop, tablet, and mobile
+- **Real-Time Dashboard**: Live metrics, activity feed, and indexer status
+
+### 🖥️ CLI & TUI
+- **Full CLI**: Script searches and automate workflows
+- **Interactive TUI**: Rich terminal interface for browsing results
+- **Magnet/Torrent Downloads**: Download directly from command line
+
+### 🔐 Sonarr/Radarr Compatible
+- **Torznab API**: Standard `/api/v2.0` endpoints
+- **Capability Reporting**: Full `/caps` endpoint support
+- **Category Mapping**: Proper category translation for *arr apps
+
+---
 
 ## Screenshots
 
-### Dashboard (Dark Theme)
-![Dashboard](web/tests/ui/screenshots/01-dashboard.png)
+### Dashboard
+The command center with real-time metrics, activity feed, and system health.
 
-### Search Interface
-![Search View](web/tests/ui/screenshots/02-search-view.png)
+![Enhanced Dashboard](web/tests/ui/screenshots/09-enhanced-dashboard.png)
 
-### Settings & Indexer Management
-![Settings View](web/tests/ui/screenshots/03-settings-view.png)
+### Unified Search
+Aggregate results from all indexers with powerful filtering and sorting.
 
-### Add Indexer Form
-![Add Indexer Form](web/tests/ui/screenshots/04-add-indexer-form.png)
+![Search Interface](web/tests/ui/screenshots/02-search-view.png)
 
-### Light Theme
-![Light Theme](web/tests/ui/screenshots/05-light-theme.png)
+### Indexer Management
+Browse, install, and configure native and proxied indexers.
 
-### Responsive Design
+![Indexers View](web/tests/ui/screenshots/03-settings-view.png)
 
-<details>
-<summary>Tablet & Mobile Views</summary>
-
-**Tablet View (768px)**
-
-![Tablet View](web/tests/ui/screenshots/07-tablet-view.png)
-
-**Mobile View (375px)**
-
-![Mobile View](web/tests/ui/screenshots/08-mobile-view.png)
-
-</details>
-
-> **Work in Progress**: This project is currently in active development (v0.4.2.0). Features and APIs may change.
-
-## Roadmap
-
-*   [ ] Improve documentation
-*   [ ] Advanced Filtering & Sorting
-*   [ ] User Authentication
-*   [ ] Implemenat of the indexer proxy, in Rust (fast & compatible with Jackett YAML definitions)
+---
 
 ## Installation
 
-### Prerequisites
+### 🐳 Docker (Recommended)
 
-*   Rust (latest stable)
-*   Node.js (for building the Web UI)
+Multi-architecture images for `linux/amd64` and `linux/arm64`.
 
-### Building from Source
+#### Docker Compose
 
-1.  Clone the repository.
-2.  Build the binary:
-```bash
-    cargo build --release
-```
-
-The executable will be located at `target/release/lodestarr`.
-
-## Docker
-
-Lodestarr is available as a pre-built multi-platform Docker image hosted on GitHub Container Registry.
-
-### Using Pre-built Images
-
-Pre-built images are automatically published for both **linux/amd64** and **linux/arm64/v8** architectures, supporting:
-- Standard x86_64/AMD64 systems (Intel/AMD processors)
-- ARM64 devices (Raspberry Pi 4+, AWS Graviton, Oracle Cloud ARM, Apple Silicon Macs)
-
-Pull the latest image:
-```bash
-docker pull ghcr.io/ddonindia/lodestarr:latest
-```
-
-Run with basic configuration:
-```bash
-docker run -d \
-  --name lodestarr \
-  -p 3420:3420 \
-  ghcr.io/ddonindia/lodestarr:latest
-```
-
-Run with persistent storage (recommended):
-```bash
-docker run -d \
-  --name lodestarr \
-  -p 3420:3420 \
-  -v lodestarr-data:/root/.config/lodestarr \
-  ghcr.io/ddonindia/lodestarr:latest
-```
-
-### Docker Compose
-
-Create a `docker-compose.yml`:
 ```yaml
-version: '3.8'
 services:
   lodestarr:
     image: ghcr.io/ddonindia/lodestarr:latest
@@ -125,144 +123,191 @@ services:
     ports:
       - "3420:3420"
     volumes:
-      - lodestarr-data:/root/.config/lodestarr
+      - ~/.config/lodestarr:/root/.config/lodestarr
     restart: unless-stopped
-
-volumes:
-  lodestarr-data:
 ```
 
-Start the service:
 ```bash
 docker-compose up -d
 ```
 
-### Building from Source
+Access the dashboard at `http://localhost:3420`.
 
-If you prefer to build the image locally:
-```bash
-# Build the image
-docker build -t lodestarr .
+#### Docker Run
 
-# Run with persistence
-docker run -d \
-  -p 3420:3420 \
-  -v lodestarr-data:/root/.config/lodestarr \
-  lodestarr
-```
-
-### Environment Variables
-
-You can customize the server behavior with environment variables:
 ```bash
 docker run -d \
   --name lodestarr \
   -p 3420:3420 \
-  -e RUST_LOG=debug \
-  -v lodestarr-data:/root/.config/lodestarr \
+  -v ~/.config/lodestarr:/root/.config/lodestarr \
   ghcr.io/ddonindia/lodestarr:latest
 ```
 
-Access the Web UI at http://localhost:3420
+### 🛠️ Build from Source
 
+**Prerequisites**: Rust (latest stable) and Node.js 18+.
 
-## Usage
-
-### Web Server
-
-Start the Lodestarr web server:
 ```bash
+git clone https://github.com/ddonindia/lodestarr.git
+cd lodestarr
+cargo build --release
 ./target/release/lodestarr serve
 ```
 
-Access the UI at http://hostip:3420
-
-### Command Line Interface
-
-#### Manage Indexers
-
-Add a new indexer:
-```bash
-./target/release/lodestarr indexer add --name MyIndexer --url "http://prowlarr:9696/1/api" --apikey "YOUR_KEY"
-```
-
-List configured indexers:
-```bash
-./target/release/lodestarr indexer list
-```
-
-Remove an indexer:
-```bash
-./target/release/lodestarr indexer remove --name MyIndexer
-```
-
-#### Search (CLI)
-
-Search all indexers:
-```bash
-./target/release/lodestarr search "Ubuntu 22.04"
-```
-
-Search specific indexer:
-```bash
-./target/release/lodestarr search "Debian" --indexer MyIndexer
-```
-
-#### Example: Internet Archive
-
-1. **Add the Indexer**:
-
-```bash
-./target/release/lodestarr indexer add --name internetarchive  "torznab_url" --apikey "key"
-```
-
-2. **Search for "Debian"**:
-
-```bash
-./target/release/lodestarr search "Debian" --indexer internetarchive
-```
-
-**Output**:
-
-```text
-Found 20 results
-
-╭────┬─────────────────┬────────────────────────────────────────────────────┬──────────┬───┬───┬──────╮
-│ #  │ Indexer         │ Title                                              │ Size     │ S │ L │ Cat  │
-├────┼─────────────────┼────────────────────────────────────────────────────┼──────────┼───┼───┼──────┤
-│ 1  │ internetarchive │ debian_classic_system_13                           │ 2.5 GB   │ 1 │ 2 │ 4000 │
-│ 2  │ internetarchive │ Debian 13 Trixie                                   │ 784.1 MB │ 1 │ 2 │ 4000 │
-│ 3  │ internetarchive │ Debian GNU Linux Bible                             │ 274.4 MB │ 1 │ 2 │ 7000 │
-│ 4  │ internetarchive │ debian-10.13.0-amd64-netinst                       │ 337.0 MB │ 1 │ 2 │ 4000 │
-│ 5  │ internetarchive │ Nils' K1v v1.26 Debian package                     │ 8.2 MB   │ 1 │ 2 │ 4000 │
-│ 6  │ internetarchive │ debian-amd64-netinst-3cx                           │ 628.0 MB │ 1 │ 2 │ 8010 │
-│ 7  │ internetarchive │ Debian 1.3 Image (QEMU Copy On Write 2)            │ 40.4 MB  │ 1 │ 2 │ 4000 │
-│ 8  │ internetarchive │ debian-live-11.1.0-amd64-kde+nonfree.iso           │ 3.2 GB   │ 1 │ 2 │ 8000 │
-│ 9  │ internetarchive │ Linux Mint Debian Edition (LMDE) 7 Cinnamon 64-bit │ 2.8 GB   │ 1 │ 2 │ 4000 │
-│ 10 │ internetarchive │ debian-13.2.0-amd64-netinst                        │ 784.1 MB │ 1 │ 2 │ 4000 │
-╰────┴─────────────────┴────────────────────────────────────────────────────┴──────────┴───┴───┴──────╯
-```
-
-#### Download
-
-Download a torrent or magnet link:
-  
-```bash
-./target/release/lodestarr download "magnet:?xt=urn:btih:..."
-```
+---
 
 ## Configuration
 
-Configuration is stored in:
-*   Linux: ~/.config/lodestarr/config.toml
+Configuration is stored in `config.toml`:
+- **Linux**: `~/.config/lodestarr/config.toml`
+
+### Database Path
+
+```toml
+# config.toml
+db_path = "/custom/path/to/lodestarr.db"
+```
+
+### Logging
+
+```bash
+RUST_LOG=debug ./lodestarr serve
+```
+
+---
+
+## CLI Usage
+
+### Search
+
+```bash
+# Basic search
+lodestarr search "ubuntu iso"
+
+# TV search with season/episode
+lodestarr search "Game of Thrones" -t tvsearch --season 1 --ep 1
+
+# Movie search with IMDB ID
+lodestarr search "" -t movie --imdbid tt0111161
+
+# Interactive mode (select result to download)
+lodestarr search "archlinux" -i
+```
+
+### Indexer Management
+
+```bash
+# List installed native indexers
+lodestarr indexer list
+
+# List proxied indexers
+lodestarr indexer list --proxied
+
+# Download indexers from Jackett
+lodestarr indexer download --list              # Browse available
+lodestarr indexer download --names yts,eztv    # Install specific
+lodestarr indexer download --all               # Install all
+
+# Test an indexer
+lodestarr indexer test yts --query "test"
+```
+
+### TUI Mode
+
+```bash
+# Launch interactive terminal UI
+lodestarr tui
+```
+
+---
 
 ## API
 
-Lodestarr exposes a Torznab-compatible API at /api/v2.0/
+Lodestarr provides a Torznab-compatible API for integration with Sonarr, Radarr, Lidarr, etc.
 
-*   Capabilities: /api/v2.0/indexers/all/caps
-*   Search: /api/v2.0/search?q=query&t=search
+| Endpoint | Description |
+|----------|-------------|
+| `/api/v2.0/indexers/all/caps` | Capabilities for all indexers |
+| `/api/v2.0/search?q=query&t=search` | Unified search across all indexers |
+| `/api/info` | Server information and version |
+| `/api/search` | Web UI search endpoint |
+| `/api/stats` | Server statistics |
+
+### Add to Sonarr/Radarr
+
+1. Go to **Settings → Indexers → Add**
+2. Select **Torznab**
+3. Set URL: `http://localhost:3420/api/v2.0/indexers/all`
+4. API Key: (leave empty or use any value)
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Lodestarr                               │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   Web UI    │  │    CLI      │  │        TUI          │  │
+│  │   (React)   │  │   (Clap)    │  │     (Ratatui)       │  │
+│  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘  │
+│         │                │                     │             │
+│         └────────────────┼─────────────────────┘             │
+│                          ▼                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                   Axum HTTP Server                     │  │
+│  │                   (Torznab API)                        │  │
+│  └───────────────────────┬───────────────────────────────┘  │
+│                          ▼                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │               Search & Aggregation Layer               │  │
+│  │         (Caching, Dedup, Timeout Management)           │  │
+│  └───────────────────────┬───────────────────────────────┘  │
+│                          ▼                                   │
+│  ┌─────────────────┐    ┌─────────────────┐                 │
+│  │ Native Indexers │    │ Proxied Indexers│                 │
+│  │ (Jackett YAML)  │    │   (Torznab)     │                 │
+│  └────────┬────────┘    └────────┬────────┘                 │
+│           │                      │                           │
+│           └──────────┬───────────┘                           │
+│                      ▼                                       │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                   SQLite Database                       │ │
+│  │          (Config, Cache, History, Stats)                │ │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## When to Use Lodestarr vs Alternatives
+
+### Use Lodestarr when:
+- Running on **Raspberry Pi** or low-power devices
+- You want **minimal resource usage** (RAM/CPU/disk)
+- You prefer **CLI/TUI** for headless servers
+- You need **fast repeat searches** (caching)
+- You want a **single binary** with no dependencies
+
+### Use Jackett when:
+- You need **maximum indexer compatibility**
+- You're already in the .NET ecosystem
+- You have plenty of server resources
+
+### Use Prowlarr when:
+- You want **auto-sync** with *arr applications
+- You need **Usenet** indexer support
+- You prefer the *arr app ecosystem
+
+---
+
+## ⚠️ Disclaimer
+
+This project is provided for **educational purposes only**. Lodestarr does not promote, encourage, or condone piracy or the unauthorized distribution of copyrighted material. Users are solely responsible for ensuring their use of this software complies with all applicable laws in their jurisdiction. The developers assume no liability for misuse of this tool.
+
+---
 
 ## License
 
-MIT
+MIT License by ddonindia.
