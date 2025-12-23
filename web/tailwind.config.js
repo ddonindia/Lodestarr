@@ -9,17 +9,19 @@ export default {
         extend: {
             colors: {
                 primary: {
-                    50: '#f0fdf4',
-                    100: '#dcfce7',
-                    200: '#bbf7d0',
-                    300: '#86efac',
-                    400: '#4ade80',
-                    500: '#10b981',
-                    600: '#059669',
-                    700: '#047857',
-                    800: '#065f46',
-                    900: '#064e3b',
+                    DEFAULT: 'var(--theme-accent)',
+                    50: 'var(--theme-accent)',
+                    100: 'var(--theme-accent)',
+                    200: 'var(--theme-accent)',
+                    300: 'var(--theme-accent)',
+                    400: 'var(--theme-accent)',
+                    500: 'var(--theme-accent)',
+                    600: 'var(--theme-accent)',
+                    700: 'var(--theme-accent)',
+                    800: 'var(--theme-accent)',
+                    900: 'var(--theme-accent)',
                 },
+                // Add gray mapping if needed for text-neutral vs theme-text
             },
             animation: {
                 'fade-in': 'fadeIn 0.2s ease-in',

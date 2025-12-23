@@ -8,8 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "pretest": "node tests/ui/test-server.cjs start",
     "test": "jest --config tests/ui/jest.config.cjs",
-    "test:headed": "set HEADLESS=false&& jest --config tests/ui/jest.config.cjs",
+    "posttest": "node tests/ui/test-server.cjs stop",
+    "test:headed": "HEADLESS=false npm test",
     "test:watch": "jest --config tests/ui/jest.config.cjs --watch"
   },
   "dependencies": {
