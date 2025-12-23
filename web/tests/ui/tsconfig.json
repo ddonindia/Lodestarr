@@ -6,6 +6,9 @@
             "node",
             "puppeteer"
         ],
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "resolveJsonModule": true

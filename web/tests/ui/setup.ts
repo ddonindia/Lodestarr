@@ -1,7 +1,16 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
+
+// Read port from test server
+const portFile = path.join(__dirname, '.test-port');
+let testPort = '3420';
+if (fs.existsSync(portFile)) {
+    testPort = fs.readFileSync(portFile, 'utf8').trim();
+}
 
 // Test configuration
-export const BASE_URL = process.env.BASE_URL || 'http://localhost:3420';
+export const BASE_URL = process.env.BASE_URL || `http://localhost:${testPort}`;
 export const HEADLESS = process.env.HEADLESS !== 'false';
 
 let browser: Browser | null = null;
@@ -11,8 +20,11 @@ let page: Page | null = null;
  * Launch browser and create a new page
  */
 export async function setupBrowser(): Promise<{ browser: Browser; page: Page }> {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
+
     browser = await puppeteer.launch({
         headless: HEADLESS,
+        executablePath,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',

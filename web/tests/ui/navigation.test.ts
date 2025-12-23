@@ -28,16 +28,16 @@ describe('Navigation Tests', () => {
         await waitForElement(page, 'header');
 
         // Check that logo is visible
-        const logo = await page.$('img[alt="Lodestarr"]');
+        const logo = await page.$('img[alt="Logo"]');
         expect(logo).not.toBeNull();
     });
 
     test('should navigate to Dashboard view by default', async () => {
         // Dashboard should be the default view
-        await waitForElement(page, 'button');
+        await waitForElement(page, 'aside');
 
         // Check that Dashboard nav button is active
-        const buttons = await page.$$('button');
+        const buttons = await page.$$('aside nav button');
         let dashboardButtonFound = false;
 
         for (const button of buttons) {
@@ -45,8 +45,11 @@ describe('Navigation Tests', () => {
             if (text?.includes('Dashboard')) {
                 dashboardButtonFound = true;
                 // Check if it has active styling
+                // Sidebar active items use var(--theme-accent) background and text-white
+                const style = await page.evaluate(el => el.getAttribute('style') || '', button);
                 const className = await page.evaluate(el => el.className, button);
-                expect(className).toContain('bg-white');
+                const isActive = style.includes('var(--theme-accent)') || className.includes('text-white');
+                expect(isActive).toBe(true);
                 break;
             }
         }
@@ -56,8 +59,8 @@ describe('Navigation Tests', () => {
 
     test('should navigate to Search view', async () => {
         // Click on Search nav button
-        await page.waitForSelector('button');
-        const buttons = await page.$$('button');
+        await waitForElement(page, 'aside nav button');
+        const buttons = await page.$$('aside nav button');
 
         for (const button of buttons) {
             const text = await page.evaluate(el => el.textContent, button);
@@ -80,8 +83,9 @@ describe('Navigation Tests', () => {
     });
 
     test('should navigate to Settings view', async () => {
-        // Click on Settings nav button
-        const buttons = await page.$$('button');
+        // Click on Settings nav button (likely "Settings" or "System", assuming text is present)
+        // Note: Sidebar usually has "Settings" text if expanded.
+        const buttons = await page.$$('aside nav button');
 
         for (const button of buttons) {
             const text = await page.evaluate(el => el.textContent, button);
@@ -104,7 +108,7 @@ describe('Navigation Tests', () => {
 
     test('should return to Dashboard when clicking logo', async () => {
         // First navigate to Search
-        const buttons = await page.$$('button');
+        const buttons = await page.$$('aside nav button');
         for (const button of buttons) {
             const text = await page.evaluate(el => el.textContent, button);
             if (text?.includes('Search')) {
@@ -133,7 +137,7 @@ describe('Navigation Tests', () => {
         const navButtons = ['Dashboard', 'Search', 'Settings'];
 
         for (const buttonText of navButtons) {
-            const buttons = await page.$$('button');
+            const buttons = await page.$$('aside nav button');
             let found = false;
 
             for (const button of buttons) {

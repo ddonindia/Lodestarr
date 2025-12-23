@@ -21,6 +21,16 @@ describe('Demo Screenshots', () => {
     test('capture comprehensive application screenshots', async () => {
         // 1. Dashboard view
         await navigateToApp(page);
+
+        // Enforce Dark Mode
+        const isDark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+        if (!isDark) {
+            console.log('Test started in Light mode, switching to Dark...');
+            const themeBtn = await page.$('button[title*="mode"]');
+            if (themeBtn) await themeBtn.click();
+            await wait(500);
+        }
+
         await wait(1000);
         await page.screenshot({
             path: path.join(screenshotDir, '01-dashboard.png'),
