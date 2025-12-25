@@ -18,25 +18,21 @@
 | **Native Indexer Support** | ✅ Uses Jackett YAML definitions | ✅ Built-in | ✅ Built-in |
 | **Proxied Indexers** | ✅ Torznab proxy | ✅ Torznab feed | ✅ Torznab + Newznab |
 | **Query Caching** | ✅ SQLite-backed (1hr TTL) | ✅ Yes | ❌ No |
-| **Database Persistence** | ✅ SQLite | ❌ In-memory | ✅ SQLite |
-| **Search History** | ✅ Full logging | ❌ Limited | ✅ Yes |
 | **CLI/TUI Interface** | ✅ Full TUI + CLI | ❌ Web only | ❌ Web only |
-| **Docker Image Size** | ~25 MB | ~300 MB | ~400 MB |
+| **Docker Image Size** | ~125 MB | ~300 MB | ~400 MB |
 | **Raspberry Pi Optimized** | ✅ Native ARM64 | ⚠️ Heavy | ⚠️ Heavy |
 | **Arr App Integration** | ✅ Torznab API | ✅ | ✅ Auto-sync |
-| **Usenet Support** | ❌ Torrents only | ⚠️ Limited | ✅ Full |
+| **Usenet Support** | ❌ Torrents only(for now) | ⚠️ Limited | ✅ Full |
 
 ### Key Differentiators
 
-- **🦀 Rust Performance**: Single binary with no runtime dependencies. Perfect for low-power devices like Raspberry Pi where Jackett/Prowlarr struggle with memory and CPU.
+- **🦀 Rust Performance**: Single binary with no runtime dependencies. Perfect for low-power devices.
   
-- **💾 Smart Caching**: Every search is cached in SQLite. Repeat queries (common when *arr apps verify grabs) return in **milliseconds** instead of hitting external indexers.
-
 - **🖥️ Terminal-First**: Full TUI (Terminal UI) and CLI for headless servers. Search, browse, and download without ever opening a browser.
 
 - **🔌 Jackett Compatibility**: Uses Jackett's battle-tested YAML indexer definitions directly. If it works in Jackett, it works in Lodestarr.
 
-- **📦 Minimal Footprint**: ~25MB Docker image vs 300-400MB for alternatives. Uses ~20MB RAM at idle vs 100-300MB.
+- **📦 Minimal Footprint**: ~125MB Docker image vs 300-400MB for alternatives. Uses ~20MB RAM at idle vs 100-300MB.
 
 ---
 
@@ -46,7 +42,6 @@
 - **Blazing Fast**: Native Rust binary with async I/O for maximum throughput
 - **Low Resource Usage**: Ideal for Raspberry Pi, NAS devices, and VPS instances
 - **Smart Caching**: SQLite-backed result caching with configurable TTL (default: 1 hour)
-- **30s Timeouts**: Responsive UI even when indexers are slow or unresponsive
 
 ### 🔍 Unified Search
 - **Aggregate Results**: Query all indexers simultaneously with a single search
@@ -187,11 +182,6 @@ lodestarr search "ubuntu iso"
 # TV search with season/episode
 lodestarr search "Game of Thrones" -t tvsearch --season 1 --ep 1
 
-# Movie search with IMDB ID
-lodestarr search "" -t movie --imdbid tt0111161
-
-# Interactive mode (select result to download)
-lodestarr search "archlinux" -i
 ```
 
 ### Indexer Management
