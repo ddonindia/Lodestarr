@@ -28,8 +28,8 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
 
     // Test state
     const [testing, setTesting] = useState(false);
-    const [testQuery, setTestQuery] = useState('test');
-    const [testResults, setTestResults] = useState<any[] | null>(null);
+    const [testResults, setTestResults] = useState<{ success: boolean; count: number; time_ms: number; message: string } | null>(null);
+
 
     useEffect(() => {
         if (isOpen && indexer) {
@@ -53,7 +53,16 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
             if (res.ok) {
                 const data = await res.json();
                 setDefinitions(data.settings || []);
-                setSettings(data.values || {});
+                // Merge saved values with defaults for advanced settings
+                const savedValues = data.values || {};
+                setSettings({
+                    '_enabled': indexer.enabled !== false ? 'true' : 'false',
+                    '_priority': '50',
+                    '_timeout': '30',
+                    '_resultLimit': '100',
+                    '_mirror': '0',
+                    ...savedValues
+                });
             } else {
                 toast.error('Failed to load settings');
             }
@@ -70,11 +79,22 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
         try {
             let res;
             if (indexer.isNative) {
+                // Save settings
                 res = await fetch(`/api/native/${indexer.id}/settings`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ settings })
                 });
+
+                // Also update enabled status if changed
+                const shouldBeEnabled = settings['_enabled'] !== 'false';
+                if (shouldBeEnabled !== indexer.enabled) {
+                    await fetch(`/api/settings/indexer/${indexer.id}/status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled: shouldBeEnabled })
+                    });
+                }
             } else {
                 // Proxied update
                 res = await fetch(`/api/settings/indexer/${indexer.name}`, {
@@ -114,7 +134,6 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        query: testQuery,
                         settings: settings // Test with CURRENT form values
                     })
                 });
@@ -131,21 +150,21 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                 });
             }
 
-            if (res.ok) {
-                if (indexer.isNative) {
-                    const results = await res.json();
-                    setTestResults(results);
-                    if (results.length === 0) toast('No results found', { icon: 'ℹ️' });
-                    else toast.success(`Found ${results.length} results`);
+            const data = await res.json();
+
+            if (indexer.isNative) {
+                setTestResults(data);
+                if (data.success) {
+                    toast.success(data.message);
                 } else {
-                    // Proxied test just returns explicit success/fail message usually
-                    // But our API returns "Connection successful" text
-                    const txt = await res.text();
-                    toast.success(txt);
+                    toast.error(data.message);
                 }
             } else {
-                const txt = await res.text();
-                toast.error(txt || 'Test failed');
+                if (res.ok) {
+                    toast.success('Connection successful');
+                } else {
+                    toast.error(data.message || 'Test failed');
+                }
             }
         } catch (e: any) {
             toast.error(e.message || 'Test failed');
@@ -178,7 +197,31 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                         <>
                             {indexer.isNative ? (
                                 <div className="space-y-4">
-                                    {definitions.length === 0 && (
+                                    {/* Mirror Selector - Show if indexer has multiple links */}
+                                    {indexer.links?.length > 1 && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-neutral-300 mb-1">
+                                                Mirror / Domain
+                                            </label>
+                                            <select
+                                                value={settings['_mirror'] || '0'}
+                                                onChange={(e) => setSettings({ ...settings, '_mirror': e.target.value })}
+                                                className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white"
+                                            >
+                                                {indexer.links?.map((url: string, idx: number) => (
+                                                    <option key={idx} value={String(idx)}>
+                                                        {(() => { try { return new URL(url).hostname; } catch { return url; } })()}
+                                                        {idx === 0 ? ' (Default)' : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <p className="text-xs text-neutral-500 mt-1">
+                                                Select an alternative domain if the default is blocked or slow.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {definitions.length === 0 && !(indexer.links?.length > 1 || indexer.legacylinks?.length > 0) && (
                                         <div className="p-4 bg-blue-500/10 text-blue-400 rounded-lg flex items-center gap-2">
                                             <AlertCircle size={18} />
                                             No configuration options available for this indexer.
@@ -216,6 +259,81 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                                             )}
                                         </div>
                                     ))}
+
+                                    {/* Advanced Settings Section */}
+                                    <div className="pt-4 border-t border-neutral-800">
+                                        <h3 className="text-sm font-semibold text-white mb-4">Advanced Settings</h3>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {/* Priority */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-neutral-300 mb-1">
+                                                    Priority
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="100"
+                                                    value={settings['_priority'] || '50'}
+                                                    onChange={(e) => setSettings({ ...settings, '_priority': e.target.value })}
+                                                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white"
+                                                />
+                                                <p className="text-xs text-neutral-500 mt-1">Lower = searched first</p>
+                                            </div>
+
+                                            {/* Timeout */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-neutral-300 mb-1">
+                                                    Timeout (seconds)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="5"
+                                                    max="120"
+                                                    value={settings['_timeout'] || '30'}
+                                                    onChange={(e) => setSettings({ ...settings, '_timeout': e.target.value })}
+                                                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white"
+                                                />
+                                                <p className="text-xs text-neutral-500 mt-1">Connection timeout</p>
+                                            </div>
+
+                                            {/* Result Limit */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-neutral-300 mb-1">
+                                                    Result Limit
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="10"
+                                                    max="500"
+                                                    value={settings['_resultLimit'] || '100'}
+                                                    onChange={(e) => setSettings({ ...settings, '_resultLimit': e.target.value })}
+                                                    className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white"
+                                                />
+                                                <p className="text-xs text-neutral-500 mt-1">Max results per search</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Enable Toggle */}
+                                        <div className="mt-4 flex items-center justify-between p-3 bg-neutral-900 rounded-lg">
+                                            <div>
+                                                <span className="text-sm font-medium text-neutral-300">Enabled</span>
+                                                <p className="text-xs text-neutral-500">Include in searches</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSettings({
+                                                    ...settings,
+                                                    '_enabled': settings['_enabled'] === 'false' ? 'true' : 'false'
+                                                })}
+                                                className={`relative w-12 h-6 rounded-full transition-colors ${settings['_enabled'] !== 'false' ? 'bg-emerald-500' : 'bg-neutral-700'
+                                                    }`}
+                                            >
+                                                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${settings['_enabled'] !== 'false' ? 'left-7' : 'left-1'
+                                                    }`} />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -250,18 +368,6 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                                     Test Connection
                                 </h3>
 
-                                {indexer.isNative && (
-                                    <div className="mb-3">
-                                        <input
-                                            type="text"
-                                            value={testQuery}
-                                            onChange={e => setTestQuery(e.target.value)}
-                                            placeholder="Search query..."
-                                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-sm text-white"
-                                        />
-                                    </div>
-                                )}
-
                                 <Button
                                     variant="secondary"
                                     size="sm"
@@ -273,17 +379,14 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                                 </Button>
 
                                 {testResults && (
-                                    <div className="mt-4 max-h-40 overflow-y-auto bg-black/50 rounded-lg p-3 text-xs font-mono">
-                                        {testResults.length === 0 ? (
-                                            <span className="text-neutral-500">No results found.</span>
-                                        ) : (
-                                            <div className="space-y-1">
-                                                {testResults.map((r, i) => (
-                                                    <div key={i} className="flex justify-between text-neutral-300">
-                                                        <span className="truncate flex-1 mr-2">{r.title}</span>
-                                                        <span className="text-neutral-500">{r.seeders} S</span>
-                                                    </div>
-                                                ))}
+                                    <div className={`mt-4 p-3 rounded-lg text-sm ${testResults.success
+                                        ? 'bg-emerald-500/10 text-emerald-400'
+                                        : 'bg-red-500/10 text-red-400'
+                                        }`}>
+                                        <div className="font-medium">{testResults.message}</div>
+                                        {testResults.time_ms > 0 && (
+                                            <div className="text-xs mt-1 opacity-75">
+                                                Response time: {testResults.time_ms}ms
                                             </div>
                                         )}
                                     </div>

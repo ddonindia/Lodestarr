@@ -330,10 +330,27 @@ pub(super) async fn search_native(
     };
 
     let config = state.config.read().await;
-    let indexers_to_search = indexers_to_search
+    let mut indexers_to_search: Vec<_> = indexers_to_search
         .into_iter()
         .filter(|d| config.is_enabled(&d.id))
-        .collect::<Vec<_>>();
+        .collect();
+
+    // Sort by priority (lower = first)
+    indexers_to_search.sort_by(|a, b| {
+        let priority_a: i32 = config
+            .native_settings
+            .get(&a.id)
+            .and_then(|s| s.get("_priority"))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(50);
+        let priority_b: i32 = config
+            .native_settings
+            .get(&b.id)
+            .and_then(|s| s.get("_priority"))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(50);
+        priority_a.cmp(&priority_b)
+    });
 
     let categories: Vec<i32> = params
         .cat
@@ -355,7 +372,7 @@ pub(super) async fn search_native(
         let proxy = proxy_url.clone();
         let settings = config.native_settings.get(&def.id).cloned();
         async move {
-            let executor = SearchExecutor::new(proxy.as_deref())
+            let executor = SearchExecutor::new_with_settings(proxy.as_deref(), settings.as_ref())
                 .unwrap_or_else(|_| SearchExecutor::new(None).expect("Failed to create executor"));
             match executor.search(&def, &q, settings.as_ref()).await {
                 Ok(results) => Some((def.id.clone(), def.name.clone(), results)),
@@ -475,8 +492,16 @@ pub(super) async fn update_native_settings(
 
 #[derive(Deserialize)]
 pub(super) struct TestNativeParams {
-    pub query: String,
+    pub query: Option<String>,
     pub settings: Option<std::collections::HashMap<String, String>>,
+}
+
+#[derive(Serialize)]
+pub(super) struct TestResult {
+    pub success: bool,
+    pub count: usize,
+    pub time_ms: u128,
+    pub message: String,
 }
 
 pub(super) async fn test_native_indexer(
@@ -484,6 +509,8 @@ pub(super) async fn test_native_indexer(
     Path(id): Path<String>,
     Json(payload): Json<TestNativeParams>,
 ) -> impl IntoResponse {
+    let start = std::time::Instant::now();
+
     let manager = state.native_indexers.read().await;
     let def = match manager.get_definition(&id).await {
         Some(d) => d,
@@ -491,7 +518,7 @@ pub(super) async fn test_native_indexer(
     };
 
     let config = state.config.read().await;
-    
+
     // If settings provided in payload (from test form), use them.
     // Otherwise fallback to saved settings.
     let settings_to_use = if payload.settings.is_some() {
@@ -500,17 +527,44 @@ pub(super) async fn test_native_indexer(
         config.native_settings.get(&id).cloned()
     };
 
+    // Use empty query for test (like Jackett)
     let query = SearchQuery {
-        query: Some(payload.query),
+        query: payload.query.or(Some(String::new())),
         ..Default::default()
     };
 
     let proxy_url = config.proxy_url.clone();
-    let executor = SearchExecutor::new(proxy_url.as_deref())
+    let executor = SearchExecutor::new_with_settings(proxy_url.as_deref(), settings_to_use.as_ref())
         .unwrap_or_else(|_| SearchExecutor::new(None).expect("Failed to create executor"));
 
     match executor.search(&def, &query, settings_to_use.as_ref()).await {
-        Ok(results) => Json(results).into_response(),
-        Err(e) => (StatusCode::BAD_GATEWAY, format!("Test failed: {}", e)).into_response(),
+        Ok(results) => {
+            let time_ms = start.elapsed().as_millis();
+            let count = results.len();
+            if count == 0 {
+                Json(TestResult {
+                    success: false,
+                    count: 0,
+                    time_ms,
+                    message: "No results found - indexer may be down or misconfigured".to_string(),
+                }).into_response()
+            } else {
+                Json(TestResult {
+                    success: true,
+                    count,
+                    time_ms,
+                    message: format!("Found {} releases in {}ms", count, time_ms),
+                }).into_response()
+            }
+        }
+        Err(e) => {
+            let time_ms = start.elapsed().as_millis();
+            Json(TestResult {
+                success: false,
+                count: 0,
+                time_ms,
+                message: format!("Test failed: {}", e),
+            }).into_response()
+        }
     }
 }

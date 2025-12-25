@@ -79,7 +79,7 @@ pub struct Setting {
     pub label: Option<String>,
 
     /// Default value
-    pub default: Option<serde_yaml::Value>,
+    pub default: Option<serde_yml::Value>,
 
     /// Options for select type
     #[serde(default)]
@@ -585,7 +585,7 @@ pub enum FilterArgs {
     Float(f64),
     Bool(bool),
     Array(Vec<String>),
-    Mixed(Vec<serde_yaml::Value>),
+    Mixed(Vec<serde_yml::Value>),
     #[default]
     None,
 }
@@ -615,9 +615,9 @@ impl FilterArgs {
             Self::Mixed(v) => v
                 .iter()
                 .filter_map(|x| match x {
-                    serde_yaml::Value::String(s) => Some(s.clone()),
-                    serde_yaml::Value::Number(n) => Some(n.to_string()),
-                    serde_yaml::Value::Bool(b) => Some(b.to_string()),
+                    serde_yml::Value::String(s) => Some(s.clone()),
+                    serde_yml::Value::Number(n) => Some(n.to_string()),
+                    serde_yml::Value::Bool(b) => Some(b.to_string()),
                     _ => None,
                 })
                 .collect(),
@@ -712,7 +712,7 @@ impl IndexerDefinition {
         };
 
         // Parse YAML
-        let definition: IndexerDefinition = serde_yaml::from_str(content)?;
+        let definition: IndexerDefinition = serde_yml::from_str(content)?;
 
         Ok(definition)
     }
@@ -755,9 +755,9 @@ impl IndexerDefinition {
         for setting in &self.settings {
             if let Some(ref default) = setting.default {
                 let value = match default {
-                    serde_yaml::Value::String(s) => s.clone(),
-                    serde_yaml::Value::Bool(b) => b.to_string(),
-                    serde_yaml::Value::Number(n) => n.to_string(),
+                    serde_yml::Value::String(s) => s.clone(),
+                    serde_yml::Value::Bool(b) => b.to_string(),
+                    serde_yml::Value::Number(n) => n.to_string(),
                     _ => continue,
                 };
                 config.insert(setting.name.clone(), value);

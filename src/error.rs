@@ -22,7 +22,7 @@ pub enum Error {
     Xml(#[from] quick_xml::Error),
 
     #[error("YAML parsing error: {0}")]
-    Yaml(#[from] serde_yaml::Error),
+    Yaml(#[from] serde_yml::Error),
 
     #[error("JSON parsing error: {0}")]
     Json(#[from] serde_json::Error),
