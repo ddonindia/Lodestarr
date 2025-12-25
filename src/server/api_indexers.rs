@@ -412,7 +412,10 @@ pub(super) async fn torznab_api(
             let settings = config.native_settings.get(&definition.id).cloned();
             let executor = SearchExecutor::new(config.proxy_url.as_deref())
                 .unwrap_or_else(|_| SearchExecutor::new(None).expect("Failed to create executor"));
-            match executor.search(&definition, &query, settings.as_ref()).await {
+            match executor
+                .search(&definition, &query, settings.as_ref())
+                .await
+            {
                 Ok(results) => (
                     StatusCode::OK,
                     [("Content-Type", "application/xml")],

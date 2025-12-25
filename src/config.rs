@@ -16,7 +16,8 @@ pub struct Config {
 
     /// Override settings for native indexers (IndexID -> Key -> Value)
     #[serde(default)]
-    pub native_settings: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+    pub native_settings:
+        std::collections::HashMap<String, std::collections::HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
