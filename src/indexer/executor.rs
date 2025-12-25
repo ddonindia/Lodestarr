@@ -24,14 +24,28 @@ pub struct SearchExecutor {
 impl SearchExecutor {
     /// Create a new search executor with optional proxy
     pub fn new(proxy_url: Option<&str>) -> Result<Self> {
+        Self::new_with_settings(proxy_url, None)
+    }
+
+    /// Create a new search executor with optional proxy and user settings
+    pub fn new_with_settings(
+        proxy_url: Option<&str>,
+        user_settings: Option<&std::collections::HashMap<String, String>>,
+    ) -> Result<Self> {
+        // Extract timeout from settings (default 30s)
+        let timeout_secs: u64 = user_settings
+            .and_then(|s| s.get("_timeout"))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(30);
+
         let client_builder = Client::builder()
             .user_agent("Lodestarr/0.4.2")
             .cookie_store(true)
-            .timeout(std::time::Duration::from_secs(30));
+            .timeout(std::time::Duration::from_secs(timeout_secs));
 
         let client = if let Some(url) = proxy_url {
             let proxy = Proxy::all(url).map_err(|e| anyhow::anyhow!("Invalid proxy URL: {}", e))?;
-            tracing::info!("Using proxy: {} (with cookie store enabled)", url);
+            tracing::info!("Using proxy: {} (timeout: {}s)", url, timeout_secs);
             client_builder.proxy(proxy)
         } else {
             client_builder
@@ -139,8 +153,23 @@ impl SearchExecutor {
         query: &SearchQuery,
         user_settings: Option<&std::collections::HashMap<String, String>>,
     ) -> Result<Vec<TorrentResult>> {
-        let base_url = definition
-            .base_url()
+        // Get base URL - use mirror selection if set
+        let mirror_index: usize = user_settings
+            .and_then(|s| s.get("_mirror"))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+
+        // Combine links and legacylinks for mirror selection
+        let all_links: Vec<&str> = definition
+            .links
+            .iter()
+            .chain(definition.legacylinks.iter())
+            .map(|s| s.as_str())
+            .collect();
+
+        let base_url = all_links
+            .get(mirror_index)
+            .or_else(|| all_links.first())
             .ok_or_else(|| anyhow::anyhow!("No base URL configured"))?;
 
         // Create template context with config defaults
@@ -225,6 +254,18 @@ impl SearchExecutor {
             all_results.len(),
             paths_to_try.len()
         );
+
+        // Apply result limit from settings
+        let result_limit: usize = user_settings
+            .and_then(|s| s.get("_resultLimit"))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(100);
+
+        if all_results.len() > result_limit {
+            all_results.truncate(result_limit);
+            tracing::debug!("Truncated results to {} limit", result_limit);
+        }
+
         Ok(all_results)
     }
 

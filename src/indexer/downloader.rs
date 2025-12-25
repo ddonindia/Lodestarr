@@ -94,7 +94,7 @@ impl IndexerDownloader {
             .context("Failed to read response body")?;
 
         // Validate YAML before saving
-        serde_yaml::from_str::<serde_yaml::Value>(&yaml_content)
+        serde_yml::from_str::<serde_yml::Value>(&yaml_content)
             .context(format!("Invalid YAML for {}", indexer.name))?;
 
         // Save to available directory
@@ -242,7 +242,7 @@ impl IndexerDownloader {
             .context("Failed to read response body")?;
 
         // Validate YAML before saving
-        serde_yaml::from_str::<serde_yaml::Value>(&yaml_content)
+        serde_yml::from_str::<serde_yml::Value>(&yaml_content)
             .context(format!("Invalid YAML for {}", indexer.name))?;
 
         // Save to indexers directory

@@ -80,8 +80,8 @@ fn render_filter_args(args: &FilterArgs, ctx: &TemplateContext) -> FilterArgs {
         FilterArgs::Mixed(arr) => FilterArgs::Mixed(
             arr.iter()
                 .map(|v| match v {
-                    serde_yaml::Value::String(s) => {
-                        serde_yaml::Value::String(render_template(s, ctx))
+                    serde_yml::Value::String(s) => {
+                        serde_yml::Value::String(render_template(s, ctx))
                     }
                     val => val.clone(),
                 })
@@ -490,8 +490,8 @@ where
         FilterArgs::Mixed(arr) => {
             if let Some(first) = arr.first() {
                 match first {
-                    serde_yaml::Value::Number(n) => n.as_f64().unwrap_or(0.0),
-                    serde_yaml::Value::String(s) => s.parse().unwrap_or(0.0),
+                    serde_yml::Value::Number(n) => n.as_f64().unwrap_or(0.0),
+                    serde_yml::Value::String(s) => s.parse().unwrap_or(0.0),
                     _ => 0.0,
                 }
             } else {
