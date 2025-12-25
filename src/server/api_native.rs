@@ -450,11 +450,7 @@ pub(super) async fn get_native_settings(
     };
 
     let config = state.config.read().await;
-    let current_values = config
-        .native_settings
-        .get(&id)
-        .cloned()
-        .unwrap_or_default();
+    let current_values = config.native_settings.get(&id).cloned().unwrap_or_default();
 
     Json(NativeSettingsResponse {
         settings: def.settings.clone(),
@@ -474,10 +470,8 @@ pub(super) async fn update_native_settings(
     Json(payload): Json<UpdateNativeSettingsParams>,
 ) -> impl IntoResponse {
     let mut config = state.config.write().await;
-    
-    config
-        .native_settings
-        .insert(id.clone(), payload.settings);
+
+    config.native_settings.insert(id.clone(), payload.settings);
 
     if let Err(e) = config.save() {
         return (
@@ -534,10 +528,14 @@ pub(super) async fn test_native_indexer(
     };
 
     let proxy_url = config.proxy_url.clone();
-    let executor = SearchExecutor::new_with_settings(proxy_url.as_deref(), settings_to_use.as_ref())
-        .unwrap_or_else(|_| SearchExecutor::new(None).expect("Failed to create executor"));
+    let executor =
+        SearchExecutor::new_with_settings(proxy_url.as_deref(), settings_to_use.as_ref())
+            .unwrap_or_else(|_| SearchExecutor::new(None).expect("Failed to create executor"));
 
-    match executor.search(&def, &query, settings_to_use.as_ref()).await {
+    match executor
+        .search(&def, &query, settings_to_use.as_ref())
+        .await
+    {
         Ok(results) => {
             let time_ms = start.elapsed().as_millis();
             let count = results.len();
@@ -547,14 +545,16 @@ pub(super) async fn test_native_indexer(
                     count: 0,
                     time_ms,
                     message: "No results found - indexer may be down or misconfigured".to_string(),
-                }).into_response()
+                })
+                .into_response()
             } else {
                 Json(TestResult {
                     success: true,
                     count,
                     time_ms,
                     message: format!("Found {} releases in {}ms", count, time_ms),
-                }).into_response()
+                })
+                .into_response()
             }
         }
         Err(e) => {
@@ -564,7 +564,8 @@ pub(super) async fn test_native_indexer(
                 count: 0,
                 time_ms,
                 message: format!("Test failed: {}", e),
-            }).into_response()
+            })
+            .into_response()
         }
     }
 }
