@@ -38,16 +38,19 @@ function App() {
       <main className="lg:pl-64 min-h-screen">
         {/* Top Bar for Mobile / Global Actions (Search, etc - can be added later) */}
         <header
-          className="h-16 border-b flex items-center justify-between px-8 sticky top-0 z-40 backdrop-blur"
+          className="h-14 lg:h-16 border-b flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40 backdrop-blur"
           style={{
             backgroundColor: 'var(--theme-card)',
             borderColor: 'var(--theme-border)',
             color: 'var(--theme-text)'
           }}
         >
-          <h2 className="text-lg font-semibold capitalize opacity-90">
-            {view}
-          </h2>
+          <div className="flex items-center gap-3">
+            <img src="/icon.png" alt="Logo" className="w-7 h-7 lg:hidden rounded-lg" />
+            <h2 className="text-base lg:text-lg font-semibold capitalize opacity-90">
+              {view}
+            </h2>
+          </div>
           {/* Top Right Actions */}
           <div className="flex items-center gap-4">
             <button
@@ -60,7 +63,7 @@ function App() {
           </div>
         </header>
 
-        <div className="p-8 max-w-[1600px] mx-auto">
+        <div className="p-4 lg:p-8 pb-24 lg:pb-8 max-w-[1600px] mx-auto">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             {view === 'dashboard' && <Dashboard />}
             {view === 'search' && <Search />}

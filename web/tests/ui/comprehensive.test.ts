@@ -171,7 +171,12 @@ describe('Comprehensive UI Tests', () => {
 
             // Trigger search
             const buttons = await page.$$('button');
-            for (const button of buttons) { if ((await page.evaluate(el => el.textContent, button)) === 'Search') await button.click(); }
+            for (const button of buttons) {
+                if ((await page.evaluate(el => el.textContent, button)) === 'Search') {
+                    await button.click();
+                    break;
+                }
+            }
             await waitForElement(page, '[data-testid="search-input"]');
             await page.type('[data-testid="search-input"]', 'linux');
             await page.click('[data-testid="search-button"]');

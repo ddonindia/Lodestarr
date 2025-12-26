@@ -91,8 +91,8 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
                 <StatCard
                     title="Total Indexers"
                     value={stats?.indexers_loaded ?? 0}
@@ -123,13 +123,13 @@ export default function Dashboard() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
                 <Card className="lg:col-span-2">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Search Activity Trend</CardTitle>
+                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <CardTitle className="text-base lg:text-lg">Search Activity Trend</CardTitle>
                         <Badge variant="neutral">Results per Search</Badge>
                     </CardHeader>
-                    <CardBody className="h-[300px]">
+                    <CardBody className="h-[200px] lg:h-[300px]">
                         {chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={chartData}>
@@ -176,7 +176,7 @@ export default function Dashboard() {
                     </CardBody>
                 </Card>
 
-                <div className="space-y-6">
+                <div className="space-y-4 lg:space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Indexer Breakdown</CardTitle>
@@ -262,20 +262,25 @@ function StatCard({ title, value, icon, color, trend, badge }: StatCardProps) {
 
     return (
         <Card className="relative overflow-hidden border border-neutral-800 bg-[#262626]">
-            <CardBody className="p-4">
-                <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg ${colors[color]}`}>
+            <CardBody className="p-3 lg:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <div className={`p-2 lg:p-3 rounded-lg ${colors[color]} hidden sm:block`}>
                         {icon}
                     </div>
-                    <div>
-                        <p className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
-                            {title}
-                        </p>
-                        <h3 className="text-2xl font-bold text-white mt-0.5">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 sm:block">
+                            <div className={`p-1.5 rounded-md ${colors[color]} sm:hidden`}>
+                                {icon}
+                            </div>
+                            <p className="text-[10px] lg:text-xs font-medium text-neutral-400 uppercase tracking-wide truncate">
+                                {title}
+                            </p>
+                        </div>
+                        <h3 className="text-xl lg:text-2xl font-bold text-white mt-0.5">
                             {value}
                         </h3>
                         {trend && (
-                            <p className="text-[11px] text-neutral-500 mt-1">
+                            <p className="text-[10px] lg:text-[11px] text-neutral-500 mt-1 truncate">
                                 {trend}
                             </p>
                         )}

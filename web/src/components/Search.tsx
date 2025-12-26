@@ -320,10 +320,11 @@ export default function Search() {
     };
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto pb-24">
-            <div className="mb-8 space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1 flex gap-2">
+        <div className="max-w-[1600px] mx-auto pb-24">
+            <div className="mb-6 lg:mb-8 space-y-3 lg:space-y-4">
+                {/* Indexer & Category Selection */}
+                <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
+                    <div className="flex flex-col sm:flex-row gap-2 lg:flex-1">
                         <select
                             id="indexer-select"
                             data-testid="indexer-select"
@@ -356,7 +357,8 @@ export default function Search() {
                                 </optgroup>
                             )}
                         </select>
-
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
                         <select
                             id="category-select"
                             data-testid="category-select"
@@ -374,40 +376,39 @@ export default function Search() {
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
                         </select>
+                        <form onSubmit={handleSearch} className="flex gap-2 flex-1 lg:min-w-[40%]">
+                            <div className="relative flex-1">
+                                <input
+                                    id="search-input"
+                                    data-testid="search-input"
+                                    type="text"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder="Search queries..."
+                                    className="w-full rounded-lg pl-10 pr-4 py-3 outline-none"
+                                    style={inputStyle}
+                                />
+                                <svg className="absolute left-3 top-3.5 h-5 w-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <button
+                                id="search-button"
+                                data-testid="search-button"
+                                type="submit"
+                                disabled={loading || !selectedIndexers}
+                                className="disabled:opacity-50 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-medium transition-colors"
+                                style={buttonPrimaryStyle}
+                            >
+                                {loading ? 'Searching...' : 'Search'}
+                            </button>
+                        </form>
                     </div>
-
-                    <form onSubmit={handleSearch} className="flex gap-2 min-w-[50%]">
-                        <div className="relative flex-1">
-                            <input
-                                id="search-input"
-                                data-testid="search-input"
-                                type="text"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Search queries..."
-                                className="w-full rounded-lg pl-10 pr-4 py-3 outline-none"
-                                style={inputStyle}
-                            />
-                            <svg className="absolute left-3 top-3.5 h-5 w-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </div>
-                        <button
-                            id="search-button"
-                            data-testid="search-button"
-                            type="submit"
-                            disabled={loading || !selectedIndexers}
-                            className="disabled:opacity-50 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-medium transition-colors"
-                            style={buttonPrimaryStyle}
-                        >
-                            {loading ? 'Searching...' : 'Search'}
-                        </button>
-                    </form>
                 </div>
 
-                {/* Filters Row */}
-                <div className="flex gap-2 items-center p-2 rounded-lg" style={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-border)' }}>
-                    <span className="text-sm opacity-60 px-2 font-medium">Filter results:</span>
+                {/* Filters Row - Horizontally scrollable on mobile */}
+                <div className="flex gap-2 items-center p-2 rounded-lg overflow-x-auto scrollbar-hide" style={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-border)' }}>
+                    <span className="text-xs lg:text-sm opacity-60 px-2 font-medium whitespace-nowrap">Filter:</span>
 
                     <div className="relative">
                         <select
@@ -451,7 +452,7 @@ export default function Search() {
                         </div>
                     </div>
 
-                    <div className="w-px h-6 opacity-30" style={{ backgroundColor: 'var(--theme-border)' }}></div>
+                    <div className="hidden sm:block w-px h-6 opacity-30" style={{ backgroundColor: 'var(--theme-border)' }}></div>
 
                     <div className="relative">
                         <input
@@ -461,7 +462,7 @@ export default function Search() {
                             value={filterText}
                             onChange={(e) => setFilterText(e.target.value)}
                             placeholder="Text filter..."
-                            className="rounded-md pl-8 pr-3 py-1.5 text-sm outline-none w-64"
+                            className="rounded-md pl-8 pr-3 py-1.5 text-sm outline-none w-40 lg:w-64"
                             style={inputStyle}
                         />
                         <svg className="absolute left-2.5 top-2 h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -471,8 +472,8 @@ export default function Search() {
                 </div>
 
                 {results.length > 0 && (
-                    <div className="flex justify-between items-center text-sm opacity-60 px-1">
-                        <div>Found {results.length} total results</div>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs lg:text-sm opacity-60 px-1">
+                        <div>Found {results.length} results</div>
                         <div className="flex items-center gap-2 pr-2">
                             <span className="text-sm mr-2">
                                 Page {currentPage} of {totalPages || 1} ({filteredAndSortedResults.length} filtered)
@@ -508,7 +509,89 @@ export default function Search() {
                 </div>
             )}
 
-            <div className="rounded-lg border border-neutral-800 overflow-hidden shadow-xl bg-[#1a1a1a]">
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-3">
+                {paginatedResults.length === 0 && !loading && !error && (
+                    <div className="p-8 text-center text-neutral-500 rounded-lg" style={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-border)' }}>
+                        {query ? (selectedIndexers ? 'No results found' : 'Select an indexer and enter a query') : 'Select an indexer to start'}
+                    </div>
+                )}
+                {paginatedResults.map((result, idx) => (
+                    <div key={idx} className="rounded-lg p-4 space-y-3" style={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-border)' }}>
+                        {/* Title & Indexer */}
+                        <div>
+                            <span className="px-2 py-0.5 rounded text-[10px] mb-2 inline-block" style={{ backgroundColor: 'var(--theme-bg)', border: '1px solid var(--theme-border)' }}>
+                                {result.Indexer || 'Unknown'}
+                            </span>
+                            {result.Comments ? (
+                                <a
+                                    href={result.Comments}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-medium text-sm block leading-snug mt-1"
+                                    style={{ color: 'var(--theme-accent)' }}
+                                >
+                                    {result.Title}
+                                </a>
+                            ) : (
+                                <p className="font-medium text-sm leading-snug mt-1">{result.Title}</p>
+                            )}
+                        </div>
+
+                        {/* Stats Row */}
+                        <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-4">
+                                <span className="font-mono opacity-80">{formatSize(result.Size)}</span>
+                                <div className="flex gap-2 font-mono">
+                                    <span className="text-emerald-400">↑{result.Seeders ?? '-'}</span>
+                                    <span className="text-red-400">↓{result.Peers ?? '-'}</span>
+                                </div>
+                            </div>
+                            <span className="opacity-50">{formatDate(result.PublishDate)}</span>
+                        </div>
+
+                        {/* Categories */}
+                        {result.Category && result.Category.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {result.Category.slice(0, 3).map(c => (
+                                    <span key={c} className="px-1.5 py-0.5 rounded text-[10px] opacity-60" style={{ backgroundColor: 'var(--theme-bg)' }}>
+                                        {TORZNAB_CATEGORIES[c] || c}
+                                    </span>
+                                ))}
+                                {result.Category.length > 3 && (
+                                    <span className="text-[10px] opacity-40">+{result.Category.length - 3}</span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-1">
+                            <a
+                                href={`/api/v2.0/indexers/${encodeURIComponent(result.IndexerId || result.Indexer || '')}/dl?link=${encodeURIComponent(result.Link || '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 py-2 rounded-lg text-center text-sm font-medium transition-colors"
+                                style={{ backgroundColor: 'var(--theme-accent)', color: 'white' }}
+                            >
+                                Download
+                            </a>
+                            {downloadConfigured && (
+                                <button
+                                    onClick={() => handleServerDownload(result.Link || '', result.Title)}
+                                    disabled={downloading === result.Link}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                    style={{ backgroundColor: 'var(--theme-bg)', border: '1px solid var(--theme-border)' }}
+                                >
+                                    {downloading === result.Link ? '...' : 'To Server'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block rounded-lg border border-neutral-800 overflow-hidden shadow-xl bg-[#1a1a1a]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-[#262626] text-neutral-400 font-medium border-b border-neutral-800">
