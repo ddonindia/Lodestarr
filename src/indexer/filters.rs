@@ -854,9 +854,6 @@ mod tests {
             ""
         );
         // Empty pattern returns value unchanged
-        assert_eq!(
-            filter_validate("test", &FilterArgs::None),
-            "test"
-        );
+        assert_eq!(filter_validate("test", &FilterArgs::None), "test");
     }
 }
