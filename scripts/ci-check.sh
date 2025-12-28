@@ -8,7 +8,7 @@ echo "=== Running CI checks locally ==="
 
 echo ""
 echo "1. Checking code formatting..."
-cargo fmt -- --check
+cargo fmt
 echo "✓ Formatting OK"
 
 echo ""

@@ -339,6 +339,11 @@ pub(super) async fn torznab_api(
         .unwrap_or("localhost:3420");
     let proxy_base_url = format!("http://{}", host);
 
+    // Handle "all" aggregate indexer
+    if indexer == "all" {
+        return torznab_all_indexers(state, params, &proxy_base_url).await;
+    }
+
     // Get native indexer manager
     let manager = state.native_indexers.read().await;
 
@@ -437,6 +442,191 @@ pub(super) async fn torznab_api(
                         .into_response()
                 }
             }
+        }
+        _ => (
+            StatusCode::BAD_REQUEST,
+            [("Content-Type", "application/xml")],
+            crate::torznab::generate_error_xml(202, &format!("Unknown action: {}", action)),
+        )
+            .into_response(),
+    }
+}
+
+/// Handle Torznab API for "all" aggregate indexer
+async fn torznab_all_indexers(
+    state: AppState,
+    params: TorznabParams,
+    proxy_base_url: &str,
+) -> axum::response::Response {
+    let action = params.t.as_deref().unwrap_or("search");
+
+    match action {
+        "caps" => {
+            // Return aggregate capabilities
+            let caps = crate::indexer::SearchCapabilities::basic();
+            let categories = vec![
+                // Console
+                1000, 1010, 1020, 1030, 1040, 1050, 1080, 1090, // Movies
+                2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060, 2070, 2080, // Audio
+                3000, 3010, 3020, 3030, 3040, 3050, // PC
+                4000, 4010, 4020, 4030, 4050, // TV
+                5000, 5010, 5020, 5030, 5040, 5045, 5050, 5060, 5070, 5080, // XXX
+                6000, 6010, 6020, 6030, 6040, 6050, // Books
+                7000, 7010, 7020, 7030, 7040, 7050, // Other
+                8000, 8010, 8020,
+            ];
+
+            (
+                StatusCode::OK,
+                [("Content-Type", "application/xml")],
+                crate::torznab::generate_caps_xml("All Indexers", &categories, &caps),
+            )
+                .into_response()
+        }
+        "search" | "tvsearch" | "movie" | "music" | "book" => {
+            let config = state.config.read().await;
+            let manager = state.native_indexers.read().await;
+
+            // Build search query for native indexers
+            let query = SearchQuery {
+                search_type: SearchType::from_param(action).unwrap_or_default(),
+                query: params.q.clone(),
+                categories: params
+                    .cat
+                    .as_ref()
+                    .map(|c| c.split(',').filter_map(|s| s.parse().ok()).collect())
+                    .unwrap_or_default(),
+                limit: params.limit,
+                offset: params.offset,
+                season: params.season,
+                episode: params.ep,
+                imdb_id: params.imdbid.clone(),
+                tvdb_id: params.tvdbid,
+                tmdb_id: params.tmdbid,
+                year: params.year,
+                genre: params.genre.clone(),
+                album: params.album.clone(),
+                artist: params.artist.clone(),
+                title: params.title.clone(),
+                author: params.author.clone(),
+                ..Default::default()
+            };
+
+            // Build search params for proxied indexers
+            let search_params = SearchParams {
+                query: params.q.clone().unwrap_or_default(),
+                search_type: action.to_string(),
+                cat: params.cat.clone(),
+                season: params.season,
+                ep: params.ep,
+                imdbid: params.imdbid.clone(),
+                tmdbid: params.tmdbid,
+                tvdbid: params.tvdbid,
+                year: params.year,
+                limit: params.limit,
+            };
+
+            let proxy_base = proxy_base_url.to_string();
+
+            // Collect all search futures
+            let mut futures: Vec<
+                std::pin::Pin<Box<dyn std::future::Future<Output = Vec<TorrentResult>> + Send>>,
+            > = Vec::new();
+
+            // Native indexers
+            let definitions = manager.list_all_definitions().await;
+            for def in definitions {
+                // Check if native indexer is enabled
+                if !config.is_enabled(&def.id) {
+                    continue;
+                }
+
+                let settings = config.native_settings.get(&def.id).cloned();
+                let executor = match SearchExecutor::new(config.proxy_url.as_deref()) {
+                    Ok(e) => e,
+                    Err(_) => continue,
+                };
+                let q = query.clone();
+                let indexer_id = def.id.clone();
+
+                futures.push(Box::pin(async move {
+                    match executor.search(&def, &q, settings.as_ref()).await {
+                        Ok(mut results) => {
+                            for r in &mut results {
+                                r.indexer = Some(indexer_id.clone());
+                            }
+                            results
+                        }
+                        Err(e) => {
+                            tracing::warn!("Native indexer {} search failed: {}", indexer_id, e);
+                            vec![]
+                        }
+                    }
+                }));
+            }
+
+            // Proxied indexers
+            for idx in &config.indexers {
+                if !config.is_enabled(&idx.name) {
+                    continue;
+                }
+
+                let client = match TorznabClient::new(
+                    &idx.url,
+                    idx.apikey.as_deref(),
+                    config.proxy_url.as_deref(),
+                ) {
+                    Ok(c) => c,
+                    Err(_) => continue,
+                };
+
+                let p = search_params.clone();
+                let indexer_name = idx.name.clone();
+
+                futures.push(Box::pin(async move {
+                    match client.search(&p).await {
+                        Ok(mut results) => {
+                            for r in &mut results {
+                                r.indexer = Some(indexer_name.clone());
+                            }
+                            results
+                        }
+                        Err(e) => {
+                            tracing::warn!("Proxied indexer {} search failed: {}", indexer_name, e);
+                            vec![]
+                        }
+                    }
+                }));
+            }
+
+            // Drop locks before awaiting
+            drop(config);
+            drop(manager);
+
+            // Execute all searches in parallel
+            let results_lists: Vec<Vec<TorrentResult>> = futures::future::join_all(futures).await;
+
+            // Aggregate results
+            let mut all_results: Vec<TorrentResult> = results_lists.into_iter().flatten().collect();
+
+            // Sort by seeders (descending)
+            all_results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
+
+            // Limit results
+            let limit = params.limit.unwrap_or(100) as usize;
+            all_results.truncate(limit);
+
+            (
+                StatusCode::OK,
+                [("Content-Type", "application/xml")],
+                crate::torznab::generate_results_xml(
+                    &all_results,
+                    "All Indexers",
+                    Some(&proxy_base),
+                    Some("all"),
+                ),
+            )
+                .into_response()
         }
         _ => (
             StatusCode::BAD_REQUEST,
