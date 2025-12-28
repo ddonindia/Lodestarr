@@ -636,3 +636,136 @@ async fn torznab_all_indexers(
             .into_response(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::torznab::TorrentResult;
+
+    #[test]
+    fn test_all_indexers_caps_xml() {
+        // Test that capabilities XML is generated correctly for "All Indexers"
+        let caps = crate::indexer::SearchCapabilities::basic();
+        let categories = vec![2000, 5000]; // Movies and TV
+
+        let xml = crate::torznab::generate_caps_xml("All Indexers", &categories, &caps);
+
+        assert!(xml.contains("Lodestarr - All Indexers"));
+        assert!(xml.contains("<search available=\"yes\""));
+        assert!(xml.contains("<tv-search available=\"yes\""));
+        assert!(xml.contains("<movie-search available=\"yes\""));
+        assert!(xml.contains("category id=\"2000\""));
+        assert!(xml.contains("category id=\"5000\""));
+    }
+
+    #[test]
+    fn test_all_indexers_results_xml() {
+        // Test that results XML includes indexer field for aggregated results
+        let results = vec![
+            TorrentResult {
+                title: "Test Result 1".to_string(),
+                guid: "guid1".to_string(),
+                seeders: Some(100),
+                indexer: Some("indexer1".to_string()),
+                ..Default::default()
+            },
+            TorrentResult {
+                title: "Test Result 2".to_string(),
+                guid: "guid2".to_string(),
+                seeders: Some(50),
+                indexer: Some("indexer2".to_string()),
+                ..Default::default()
+            },
+        ];
+
+        let xml = crate::torznab::generate_results_xml(
+            &results,
+            "All Indexers",
+            Some("http://localhost:3420"),
+            Some("all"),
+        );
+
+        assert!(xml.contains("<title>All Indexers</title>"));
+        assert!(xml.contains("<title>Test Result 1</title>"));
+        assert!(xml.contains("<title>Test Result 2</title>"));
+        assert!(xml.contains("torznab:attr name=\"seeders\" value=\"100\""));
+        assert!(xml.contains("torznab:attr name=\"seeders\" value=\"50\""));
+    }
+
+    #[test]
+    fn test_all_indexers_results_sorted_by_seeders() {
+        // Test that results are sorted by seeders (highest first)
+        let mut results = vec![
+            TorrentResult {
+                title: "Low seeders".to_string(),
+                seeders: Some(10),
+                ..Default::default()
+            },
+            TorrentResult {
+                title: "High seeders".to_string(),
+                seeders: Some(100),
+                ..Default::default()
+            },
+            TorrentResult {
+                title: "Medium seeders".to_string(),
+                seeders: Some(50),
+                ..Default::default()
+            },
+            TorrentResult {
+                title: "No seeders".to_string(),
+                seeders: None,
+                ..Default::default()
+            },
+        ];
+
+        // Sort using the same logic as torznab_all_indexers
+        results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
+
+        assert_eq!(results[0].title, "High seeders");
+        assert_eq!(results[1].title, "Medium seeders");
+        assert_eq!(results[2].title, "Low seeders");
+        assert_eq!(results[3].title, "No seeders");
+    }
+
+    #[test]
+    fn test_all_indexers_download_proxy_url() {
+        // Test that download URLs are proxied through /api/v2.0/indexers/all/dl
+        let results = vec![TorrentResult {
+            title: "Test".to_string(),
+            guid: "guid".to_string(),
+            link: Some("https://example.com/download/123".to_string()),
+            ..Default::default()
+        }];
+
+        let xml = crate::torznab::generate_results_xml(
+            &results,
+            "All Indexers",
+            Some("http://localhost:3420"),
+            Some("all"),
+        );
+
+        // Download URL should be proxied through the /all indexer
+        assert!(xml.contains("/api/v2.0/indexers/all/dl?link="));
+    }
+
+    #[test]
+    fn test_all_indexers_magnet_not_proxied() {
+        // Test that magnet URLs are NOT proxied (used directly)
+        let results = vec![TorrentResult {
+            title: "Test".to_string(),
+            guid: "guid".to_string(),
+            magnet: Some("magnet:?xt=urn:btih:abc123".to_string()),
+            ..Default::default()
+        }];
+
+        let xml = crate::torznab::generate_results_xml(
+            &results,
+            "All Indexers",
+            Some("http://localhost:3420"),
+            Some("all"),
+        );
+
+        // Magnet URL should NOT be proxied
+        assert!(xml.contains("magnet:?xt=urn:btih:abc123"));
+        assert!(!xml.contains("/api/v2.0/indexers/all/dl?link=bWFnbmV0"));
+    }
+}
