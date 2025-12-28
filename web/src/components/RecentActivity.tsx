@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Trash2, RefreshCw, Eye, X, ExternalLink, Magnet, Download } from 'lucide-react';
+import { Search, Trash2, RefreshCw, Eye, X, ExternalLink, Magnet, Download, Info, Copy, Check } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardTitle, Button, Badge, Spinner } from './ui';
 import toast from 'react-hot-toast';
 
@@ -21,6 +21,10 @@ interface TorrentResult {
     leechers?: number;
     size?: number;
     indexer?: string;
+    info_hash?: string;
+    grabs?: number;
+    categories?: number[];
+    publish_date?: string;
 }
 
 export default function RecentActivity() {
@@ -30,6 +34,8 @@ export default function RecentActivity() {
     const [selectedResults, setSelectedResults] = useState<TorrentResult[] | null>(null);
     const [selectedQuery, setSelectedQuery] = useState('');
     const [loadingResults, setLoadingResults] = useState(false);
+    const [inspectedResult, setInspectedResult] = useState<TorrentResult | null>(null);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
 
     useEffect(() => {
         loadActivity();
@@ -97,6 +103,17 @@ export default function RecentActivity() {
             i++;
         }
         return `${size.toFixed(1)} ${units[i]}`;
+    };
+
+    const copyToClipboard = async (text: string, field: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedField(field);
+            setTimeout(() => setCopiedField(null), 2000);
+            toast.success('Copied to clipboard');
+        } catch {
+            toast.error('Failed to copy');
+        }
     };
 
     if (loading) {
@@ -251,6 +268,13 @@ export default function RecentActivity() {
                                                     <span className="text-red-500">{result.leechers ?? '-'}</span>
                                                 </td>
                                                 <td className="px-4 py-2 text-right space-x-1">
+                                                    <button
+                                                        onClick={() => setInspectedResult(result)}
+                                                        className="inline-flex items-center px-2 py-1 bg-neutral-700 hover:bg-neutral-600 rounded text-xs"
+                                                        title="Inspect details"
+                                                    >
+                                                        <Info className="w-3 h-3" />
+                                                    </button>
                                                     {result.details && (
                                                         <a
                                                             href={result.details}
@@ -288,6 +312,166 @@ export default function RecentActivity() {
                         </div>
                         <div className="p-4 border-t border-neutral-800 text-center text-neutral-400 text-sm">
                             {selectedResults.length} results
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Inspect Modal */}
+            {inspectedResult && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
+                    <div className="bg-[#1e1e1e] rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col border border-neutral-700">
+                        <div className="flex items-center justify-between p-4 border-b border-neutral-700 bg-[#262626]">
+                            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Info className="w-5 h-5 text-blue-400" />
+                                Result Details
+                            </h3>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setInspectedResult(null)}
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        <div className="overflow-auto flex-1 p-4 space-y-4">
+                            {/* Title */}
+                            <div>
+                                <label className="block text-xs text-neutral-400 mb-1">Title</label>
+                                <div className="text-white font-medium">{inspectedResult.title}</div>
+                            </div>
+
+                            {/* Basic Info */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Size</label>
+                                    <div className="text-white">{formatSize(inspectedResult.size)}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Seeders</label>
+                                    <div className="text-green-500">{inspectedResult.seeders ?? '-'}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Leechers</label>
+                                    <div className="text-red-500">{inspectedResult.leechers ?? '-'}</div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Indexer</label>
+                                    <div className="text-white">{inspectedResult.indexer || '-'}</div>
+                                </div>
+                            </div>
+
+                            {/* Info Hash */}
+                            {inspectedResult.info_hash && (
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Info Hash</label>
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-xs bg-neutral-800 px-2 py-1 rounded text-amber-400 flex-1 truncate">
+                                            {inspectedResult.info_hash}
+                                        </code>
+                                        <button
+                                            onClick={() => copyToClipboard(inspectedResult.info_hash!, 'hash')}
+                                            className="p-1 hover:bg-neutral-700 rounded"
+                                        >
+                                            {copiedField === 'hash' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-neutral-400" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Magnet Link */}
+                            {inspectedResult.magnet && (
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Magnet Link</label>
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-xs bg-neutral-800 px-2 py-1 rounded text-purple-400 flex-1 truncate">
+                                            {inspectedResult.magnet}
+                                        </code>
+                                        <button
+                                            onClick={() => copyToClipboard(inspectedResult.magnet!, 'magnet')}
+                                            className="p-1 hover:bg-neutral-700 rounded"
+                                        >
+                                            {copiedField === 'magnet' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-neutral-400" />}
+                                        </button>
+                                        <a
+                                            href={inspectedResult.magnet}
+                                            className="p-1 hover:bg-purple-600 bg-purple-700 rounded"
+                                        >
+                                            <Magnet className="w-4 h-4" />
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Download Link */}
+                            {inspectedResult.link && !inspectedResult.link.startsWith('magnet:') && (
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Download URL (Proxy)</label>
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-xs bg-neutral-800 px-2 py-1 rounded text-blue-400 flex-1 truncate">
+                                            {inspectedResult.link}
+                                        </code>
+                                        <button
+                                            onClick={() => copyToClipboard(inspectedResult.link!, 'link')}
+                                            className="p-1 hover:bg-neutral-700 rounded"
+                                        >
+                                            {copiedField === 'link' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-neutral-400" />}
+                                        </button>
+                                        <a
+                                            href={inspectedResult.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-1 hover:bg-blue-600 bg-blue-700 rounded"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Details URL */}
+                            {inspectedResult.details && (
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">Details Page</label>
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-xs bg-neutral-800 px-2 py-1 rounded text-cyan-400 flex-1 truncate">
+                                            {inspectedResult.details}
+                                        </code>
+                                        <button
+                                            onClick={() => copyToClipboard(inspectedResult.details!, 'details')}
+                                            className="p-1 hover:bg-neutral-700 rounded"
+                                        >
+                                            {copiedField === 'details' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-neutral-400" />}
+                                        </button>
+                                        <a
+                                            href={inspectedResult.details}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-1 hover:bg-cyan-600 bg-cyan-700 rounded"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* GUID */}
+                            {inspectedResult.guid && (
+                                <div>
+                                    <label className="block text-xs text-neutral-400 mb-1">GUID</label>
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-xs bg-neutral-800 px-2 py-1 rounded text-neutral-300 flex-1 truncate">
+                                            {inspectedResult.guid}
+                                        </code>
+                                        <button
+                                            onClick={() => copyToClipboard(inspectedResult.guid, 'guid')}
+                                            className="p-1 hover:bg-neutral-700 rounded"
+                                        >
+                                            {copiedField === 'guid' ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-neutral-400" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
