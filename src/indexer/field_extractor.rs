@@ -162,10 +162,10 @@ pub fn extract_html_fields(element: &ElementRef, fields: &Fields, ctx: &mut Temp
     // Pass 1: Extract actual fields (selectors only, NOT text templates)
 
     // Standard fields - title is required so always try to extract
-    if fields.title.selector().is_some() {
-        if let Some(val) = extract_html_field(element, &fields.title, ctx) {
-            ctx.set_result("title", val);
-        }
+    if fields.title.selector().is_some()
+        && let Some(val) = extract_html_field(element, &fields.title, ctx)
+    {
+        ctx.set_result("title", val);
     }
     extract_std("details", &fields.details, ctx);
     extract_std("download", &fields.download, ctx);
@@ -258,7 +258,10 @@ pub fn extract_json_fields(
         if let Some(s) = sel {
             // Skip text-only templates in Pass 1 - they depend on other fields
             if s.selector().is_none() && s.text().is_some() {
-                tracing::debug!("JSON Pass 1: Skipping text-template standard field '{}' (will compute in Pass 2+)", name);
+                tracing::debug!(
+                    "JSON Pass 1: Skipping text-template standard field '{}' (will compute in Pass 2+)",
+                    name
+                );
                 return;
             }
             if let Some(val) = extract_json_field(item, parent, s, ctx) {
@@ -286,14 +289,25 @@ pub fn extract_json_fields(
     for (name, selector_def) in &fields.extra {
         // Skip text-only (computed)
         if selector_def.selector().is_none() && selector_def.text().is_some() {
-            tracing::debug!("JSON Pass 1: Skipping text-only field '{}' (will compute later)", name);
+            tracing::debug!(
+                "JSON Pass 1: Skipping text-only field '{}' (will compute later)",
+                name
+            );
             continue;
         }
         if let Some(value) = extract_json_field(item, parent, selector_def, ctx) {
-            tracing::debug!("JSON Pass 1: Extracted extra field '{}' = '{}'", name, value);
+            tracing::debug!(
+                "JSON Pass 1: Extracted extra field '{}' = '{}'",
+                name,
+                value
+            );
             ctx.set_result(name, value);
         } else {
-            tracing::debug!("JSON Pass 1: Failed to extract extra field '{}' (selector: {:?})", name, selector_def.selector());
+            tracing::debug!(
+                "JSON Pass 1: Failed to extract extra field '{}' (selector: {:?})",
+                name,
+                selector_def.selector()
+            );
         }
     }
 
@@ -317,8 +331,17 @@ pub fn extract_json_fields(
                 continue;
             }
 
-            tracing::debug!("JSON Pass {}: Computing extra template field '{}' with text '{:?}'", pass + 2, name, selector_def.text());
-            tracing::debug!("JSON Pass {}: Current ctx.result: {:?}", pass + 2, ctx.result);
+            tracing::debug!(
+                "JSON Pass {}: Computing extra template field '{}' with text '{:?}'",
+                pass + 2,
+                name,
+                selector_def.text()
+            );
+            tracing::debug!(
+                "JSON Pass {}: Current ctx.result: {:?}",
+                pass + 2,
+                ctx.result
+            );
             if let Some(value) = extract_json_field(item, parent, selector_def, ctx)
                 && !value.is_empty()
             {
@@ -337,7 +360,12 @@ pub fn extract_json_fields(
                 && s.selector().is_none()
                 && s.text().is_some()
             {
-                tracing::debug!("JSON Pass {}: Computing standard field '{}' with text '{:?}'", pass + 2, name, s.text());
+                tracing::debug!(
+                    "JSON Pass {}: Computing standard field '{}' with text '{:?}'",
+                    pass + 2,
+                    name,
+                    s.text()
+                );
                 if let Some(val) = extract_json_field(item, parent, s, ctx) {
                     tracing::debug!("JSON Pass {}: Computed '{}' = '{}'", pass + 2, name, val);
                     ctx.set_result(name, val);

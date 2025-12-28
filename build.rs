@@ -10,8 +10,39 @@ fn main() {
     println!("cargo:rerun-if-changed=web/tsconfig.json");
     println!("cargo:rerun-if-changed=web/vite.config.ts");
 
+    // Check code formatting (matches GitHub Actions)
+    check_formatting();
+
+    // NOTE: Clippy check is NOT done here because it causes recursive builds
+    // (clippy needs to compile, which triggers build.rs again)
+    // Run 'cargo clippy -- -D warnings' manually before pushing
+
     // Always build the frontend to ensure it's up-to-date
     build_frontend();
+}
+
+fn check_formatting() {
+    // Only check formatting in debug builds to speed up release builds
+    if std::env::var("PROFILE").unwrap_or_default() == "release" {
+        return;
+    }
+
+    println!("cargo:warning=Checking code formatting...");
+    let fmt_status = Command::new("cargo")
+        .args(["fmt", "--", "--check"])
+        .status();
+
+    match fmt_status {
+        Ok(status) if !status.success() => {
+            panic!("Code formatting check failed! Run 'cargo fmt' to fix formatting issues.");
+        }
+        Err(e) => {
+            println!("cargo:warning=Could not run cargo fmt: {}", e);
+        }
+        _ => {
+            println!("cargo:warning=✓ Code formatting check passed.");
+        }
+    }
 }
 
 fn build_frontend() {
