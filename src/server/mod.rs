@@ -190,6 +190,10 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
             axum::routing::post(clear_activity_api),
         )
         .route("/api/download", axum::routing::post(trigger_download))
+        .route(
+            "/api/torrent/meta",
+            axum::routing::post(get_torrent_metadata),
+        )
         .with_state(state)
         .fallback(static_handler)
         .layer(TraceLayer::new_for_http());

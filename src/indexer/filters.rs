@@ -106,10 +106,14 @@ pub fn apply_filter(value: &str, filter: &Filter) -> String {
             .unwrap_or_else(|_| value.to_string()),
         "urlencode" => urlencoding::encode(value).to_string(),
         "htmldecode" => html_escape::decode_html_entities(value).to_string(),
+        "htmlencode" => html_escape::encode_text(value).to_string(),
         "dateparse" => filter_dateparse(value, &filter.args),
+        "timeparse" => filter_dateparse(value, &filter.args), // alias for dateparse
         "timeago" => filter_timeago(value),
+        "reltime" => filter_timeago(value), // alias for timeago
         "fuzzytime" => filter_fuzzytime(value),
         "validfilename" => filter_validfilename(value),
+        "diacritics" => filter_diacritics(value),
         // Text case filters
         "tolower" => value.to_lowercase(),
         "toupper" => value.to_uppercase(),
@@ -117,6 +121,16 @@ pub fn apply_filter(value: &str, filter: &Filter) -> String {
         "uppercase" => value.to_uppercase(),
         "substring" => filter_substring(value, &filter.args),
         "striptags" | "strip_tags" => filter_striptags(value),
+
+        // JSON filters
+        "jsonjoinarray" => filter_jsonjoinarray(value, &filter.args),
+
+        // Debug filters
+        "hexdump" => filter_hexdump(value),
+        "strdump" => filter_strdump(value),
+
+        // Validation
+        "validate" => filter_validate(value, &filter.args),
 
         // Math filters
         "num_add" | "add" => filter_math(value, &filter.args, |a, b| a + b),
@@ -526,6 +540,112 @@ where
     }
 }
 
+/// Remove diacritics (accents) from text - converts é to e, ñ to n, etc.
+fn filter_diacritics(value: &str) -> String {
+    // Common diacritics mapping
+    value
+        .chars()
+        .map(|c| match c {
+            'á' | 'à' | 'ä' | 'â' | 'ã' | 'å' | 'ā' => 'a',
+            'Á' | 'À' | 'Ä' | 'Â' | 'Ã' | 'Å' | 'Ā' => 'A',
+            'é' | 'è' | 'ë' | 'ê' | 'ē' | 'ę' => 'e',
+            'É' | 'È' | 'Ë' | 'Ê' | 'Ē' | 'Ę' => 'E',
+            'í' | 'ì' | 'ï' | 'î' | 'ī' => 'i',
+            'Í' | 'Ì' | 'Ï' | 'Î' | 'Ī' => 'I',
+            'ó' | 'ò' | 'ö' | 'ô' | 'õ' | 'ō' | 'ø' => 'o',
+            'Ó' | 'Ò' | 'Ö' | 'Ô' | 'Õ' | 'Ō' | 'Ø' => 'O',
+            'ú' | 'ù' | 'ü' | 'û' | 'ū' => 'u',
+            'Ú' | 'Ù' | 'Ü' | 'Û' | 'Ū' => 'U',
+            'ý' | 'ÿ' => 'y',
+            'Ý' | 'Ÿ' => 'Y',
+            'ñ' => 'n',
+            'Ñ' => 'N',
+            'ç' => 'c',
+            'Ç' => 'C',
+            'ß' => 's',
+            'ð' => 'd',
+            'Ð' => 'D',
+            'þ' => 't',
+            'Þ' => 'T',
+            'æ' => 'a',
+            'Æ' => 'A',
+            'œ' => 'o',
+            'Œ' => 'O',
+            'ł' => 'l',
+            'Ł' => 'L',
+            'ž' | 'ź' | 'ż' => 'z',
+            'Ž' | 'Ź' | 'Ż' => 'Z',
+            'š' | 'ś' => 's',
+            'Š' | 'Ś' => 'S',
+            'č' | 'ć' => 'c',
+            'Č' | 'Ć' => 'C',
+            'ř' => 'r',
+            'Ř' => 'R',
+            'ň' | 'ń' => 'n',
+            'Ň' | 'Ń' => 'N',
+            'ď' => 'd',
+            'Ď' => 'D',
+            'ť' => 't',
+            'Ť' => 'T',
+            _ => c,
+        })
+        .collect()
+}
+
+/// Join JSON array elements with separator
+fn filter_jsonjoinarray(value: &str, args: &FilterArgs) -> String {
+    let separator = args.as_str().unwrap_or_else(|| ",".to_string());
+
+    // Try to parse as JSON array
+    if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(value) {
+        arr.iter()
+            .filter_map(|v| match v {
+                serde_json::Value::String(s) => Some(s.clone()),
+                serde_json::Value::Number(n) => Some(n.to_string()),
+                serde_json::Value::Bool(b) => Some(b.to_string()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join(&separator)
+    } else {
+        value.to_string()
+    }
+}
+
+/// Debug filter - dumps hex representation of string
+fn filter_hexdump(value: &str) -> String {
+    value
+        .as_bytes()
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Debug filter - dumps string with escape sequences visible
+fn filter_strdump(value: &str) -> String {
+    format!("{:?}", value)
+}
+
+/// Validate filter - returns empty if value doesn't match regex pattern
+fn filter_validate(value: &str, args: &FilterArgs) -> String {
+    let pattern = args.as_str().unwrap_or_default();
+    if pattern.is_empty() {
+        return value.to_string();
+    }
+
+    match get_cached_regex(&pattern) {
+        Ok(re) => {
+            if re.is_match(value).unwrap_or(false) {
+                value.to_string()
+            } else {
+                String::new()
+            }
+        }
+        Err(_) => value.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -664,6 +784,79 @@ mod tests {
                 a
             }),
             "2.5"
+        );
+    }
+
+    #[test]
+    fn test_diacritics() {
+        assert_eq!(filter_diacritics("café"), "cafe");
+        assert_eq!(filter_diacritics("résumé"), "resume");
+        assert_eq!(filter_diacritics("naïve"), "naive");
+        assert_eq!(filter_diacritics("Müller"), "Muller");
+        assert_eq!(filter_diacritics("señor"), "senor");
+        assert_eq!(filter_diacritics("Łódź"), "Lodz");
+        assert_eq!(filter_diacritics("Dvořák"), "Dvorak");
+    }
+
+    #[test]
+    fn test_htmlencode() {
+        let filter = Filter {
+            name: "htmlencode".to_string(),
+            args: FilterArgs::None,
+        };
+        // html_escape::encode_text escapes <, >, &, " but not single quotes
+        assert_eq!(
+            apply_filter("<script>alert('xss')</script>", &filter),
+            "&lt;script&gt;alert('xss')&lt;/script&gt;"
+        );
+        assert_eq!(apply_filter("a & b", &filter), "a &amp; b");
+    }
+
+    #[test]
+    fn test_jsonjoinarray() {
+        assert_eq!(
+            filter_jsonjoinarray(r#"["a","b","c"]"#, &FilterArgs::String(", ".to_string())),
+            "a, b, c"
+        );
+        assert_eq!(
+            filter_jsonjoinarray(r#"[1,2,3]"#, &FilterArgs::String("-".to_string())),
+            "1-2-3"
+        );
+        // Default separator
+        assert_eq!(
+            filter_jsonjoinarray(r#"["x","y"]"#, &FilterArgs::None),
+            "x,y"
+        );
+    }
+
+    #[test]
+    fn test_hexdump() {
+        assert_eq!(filter_hexdump("ABC"), "41 42 43");
+        assert_eq!(filter_hexdump("hi"), "68 69");
+    }
+
+    #[test]
+    fn test_strdump() {
+        assert_eq!(filter_strdump("hello\nworld"), "\"hello\\nworld\"");
+        assert_eq!(filter_strdump("tab\there"), "\"tab\\there\"");
+    }
+
+    #[test]
+    fn test_validate() {
+        // Valid match
+        assert_eq!(
+            filter_validate("abc123", &FilterArgs::String(r"^\w+$".to_string())),
+            "abc123"
+        );
+        // Invalid match returns empty
+        assert_eq!(
+            filter_validate("abc 123", &FilterArgs::String(r"^\w+$".to_string())),
+            ""
+        );
+        // Empty pattern returns value unchanged
+        assert_eq!(
+            filter_validate("test", &FilterArgs::None),
+            "test"
         );
     }
 }

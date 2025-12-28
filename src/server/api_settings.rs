@@ -261,3 +261,190 @@ pub(super) async fn remove_indexer_api(
         (StatusCode::NOT_FOUND, "Indexer not found").into_response()
     }
 }
+
+// Torrent metadata structures
+#[derive(Deserialize)]
+pub(super) struct TorrentMetaParams {
+    url: String,
+}
+
+#[derive(Serialize)]
+pub(super) struct TorrentFileInfo {
+    path: String,
+    size: u64,
+}
+
+#[derive(Serialize)]
+pub(super) struct TorrentMetadataResponse {
+    name: String,
+    info_hash: String,
+    total_size: u64,
+    piece_length: u64,
+    files: Vec<TorrentFileInfo>,
+    trackers: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    creation_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    comment: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct TorrentInfo {
+    name: Option<String>,
+    #[serde(rename = "piece length")]
+    piece_length: Option<u64>,
+    length: Option<u64>,
+    files: Option<Vec<TorrentFile>>,
+    #[serde(skip)]
+    #[allow(dead_code)]
+    pieces: Option<serde_bytes::ByteBuf>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct TorrentFile {
+    length: u64,
+    path: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct TorrentData {
+    info: TorrentInfo,
+    announce: Option<String>,
+    #[serde(rename = "announce-list")]
+    announce_list: Option<Vec<Vec<String>>>,
+    #[serde(rename = "created by")]
+    created_by: Option<String>,
+    #[serde(rename = "creation date")]
+    creation_date: Option<i64>,
+    comment: Option<String>,
+}
+
+pub(super) async fn get_torrent_metadata(
+    State(state): State<AppState>,
+    Json(payload): Json<TorrentMetaParams>,
+) -> impl IntoResponse {
+    // Fetch the torrent file
+    let proxy_url = {
+        let config = state.config.read().await;
+        config.proxy_url.clone()
+    };
+
+    let client = match TorznabClient::new("http://localhost", None, proxy_url.as_deref()) {
+        Ok(c) => c,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to create client: {}", e),
+            )
+                .into_response();
+        }
+    };
+
+    // Build full URL
+    let full_url = if payload.url.starts_with("http") {
+        payload.url.clone()
+    } else {
+        format!("http://localhost:3420{}", payload.url)
+    };
+
+    // Download the torrent file
+    let bytes = match client.download(&full_url).await {
+        Ok(b) => b,
+        Err(e) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                format!("Failed to fetch torrent: {}", e),
+            )
+                .into_response();
+        }
+    };
+
+    // Parse bencode
+    let torrent: TorrentData = match serde_bencode::from_bytes(&bytes) {
+        Ok(t) => t,
+        Err(e) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                format!("Failed to parse torrent: {}", e),
+            )
+                .into_response();
+        }
+    };
+
+    // Calculate info hash
+    let info_bytes = match serde_bencode::to_bytes(&torrent.info) {
+        Ok(b) => b,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to re-encode info dict".to_string(),
+            )
+                .into_response();
+        }
+    };
+
+    use sha1::{Digest, Sha1};
+    let mut hasher = Sha1::new();
+    hasher.update(&info_bytes);
+    let result = hasher.finalize();
+    let info_hash = hex::encode(result);
+
+    // Extract files
+    let (files, total_size) = if let Some(file_list) = torrent.info.files {
+        let mut total = 0u64;
+        let files: Vec<TorrentFileInfo> = file_list
+            .iter()
+            .map(|f| {
+                total += f.length;
+                TorrentFileInfo {
+                    path: f.path.join("/"),
+                    size: f.length,
+                }
+            })
+            .collect();
+        (files, total)
+    } else {
+        // Single file torrent
+        let size = torrent.info.length.unwrap_or(0);
+        let name = torrent.info.name.clone().unwrap_or_default();
+        (vec![TorrentFileInfo { path: name, size }], size)
+    };
+
+    // Extract trackers
+    let mut trackers: Vec<String> = Vec::new();
+    if let Some(announce) = torrent.announce {
+        trackers.push(announce);
+    }
+    if let Some(announce_list) = torrent.announce_list {
+        for tier in announce_list {
+            for tracker in tier {
+                if !trackers.contains(&tracker) {
+                    trackers.push(tracker);
+                }
+            }
+        }
+    }
+
+    // Format creation date
+    let creation_date = torrent.creation_date.map(|ts| {
+        chrono::DateTime::from_timestamp(ts, 0)
+            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+            .unwrap_or_else(|| ts.to_string())
+    });
+
+    let response = TorrentMetadataResponse {
+        name: torrent.info.name.unwrap_or_default(),
+        info_hash,
+        total_size,
+        piece_length: torrent.info.piece_length.unwrap_or(0),
+        files,
+        trackers,
+        created_by: torrent.created_by,
+        creation_date,
+        comment: torrent.comment,
+    };
+
+    Json(response).into_response()
+}

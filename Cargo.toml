@@ -74,3 +74,9 @@ futures = "0.3"
 rusqlite = { version = "0.33", features = ["bundled", "chrono"] }
 r2d2 = "0.8"
 r2d2_sqlite = "0.26"
+
+# Torrent file parsing
+serde_bencode = "0.2"
+sha1 = "0.10"
+hex = "0.4"
+serde_bytes = "0.11"

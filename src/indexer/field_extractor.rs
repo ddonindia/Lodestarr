@@ -3,7 +3,7 @@
 //! This module consolidates field extraction logic that was previously duplicated
 //! in the SearchExecutor implementation.
 
-use scraper::{ElementRef, Selector};
+use scraper::ElementRef;
 use serde_json::Value as JsonValue;
 
 use super::definition::{Fields, SelectorDef};
@@ -17,10 +17,19 @@ pub fn extract_html_field(
     ctx: &TemplateContext,
 ) -> Option<String> {
     process_field(selector_def, ctx, |sel| {
-        // CSS selector logic
-        if let Ok(selector) = Selector::parse(sel) {
-            if let Some(found) = element.select(&selector).next() {
-                match selector_def.attribute() {
+        // Handle comma-separated alternatives (e.g., "td:contains(GB), td:contains(MB)")
+        for selector_part in sel.split(',') {
+            let selector_part = selector_part.trim();
+            if selector_part.is_empty() {
+                continue;
+            }
+
+            // Use our selector chain parsing which handles :contains() and CSS escapes
+            let chain = super::selector::parse_selector_chain(selector_part);
+            let matches = super::selector::apply_selector_chain(vec![*element], &chain);
+
+            if let Some(found) = matches.first() {
+                let value = match selector_def.attribute() {
                     Some(attr) => found.value().attr(attr).map(|s| s.to_string()),
                     None => Some(
                         found
@@ -30,13 +39,13 @@ pub fn extract_html_field(
                             .trim()
                             .to_string(),
                     ),
+                };
+                if value.as_ref().map(|v| !v.is_empty()).unwrap_or(false) {
+                    return value;
                 }
-            } else {
-                None
             }
-        } else {
-            None
         }
+        None
     })
 }
 
