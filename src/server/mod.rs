@@ -22,7 +22,7 @@ use tower_http::trace::TraceLayer;
 
 // Handlers are used directly via module paths (e.g., api_info::api_info)
 use api_indexers::*;
-use api_info::{api_info, get_stats};
+use api_info::{api_info, get_history, get_history_results, get_stats};
 use api_native::*;
 use api_settings::*;
 use static_files::static_handler;
@@ -119,6 +119,8 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
         // API Endpoints
         .route("/api/info", get(api_info))
         .route("/api/stats", get(get_stats))
+        .route("/api/history", get(get_history))
+        .route("/api/history/{key}", get(get_history_results))
         .route("/api/v2.0/indexers", get(list_indexers))
         .route("/api/v2.0/search", get(search_api))
         .route(

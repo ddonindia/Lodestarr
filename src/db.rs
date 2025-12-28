@@ -163,3 +163,71 @@ pub struct SearchLog {
     pub timestamp: DateTime<Utc>,
     pub result_count: usize,
 }
+
+/// Represents a cached search entry
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CachedSearch {
+    pub cache_key: String,
+    pub query: String,
+    pub indexer: String,
+    pub expires_at: DateTime<Utc>,
+    pub result_count: usize,
+}
+
+/// Get list of all non-expired cached searches
+pub fn get_cached_search_list(pool: &DbPool) -> anyhow::Result<Vec<CachedSearch>> {
+    let conn = pool.get()?;
+    let mut stmt = conn.prepare(
+        "SELECT key, results, expires_at FROM search_cache WHERE expires_at > ?1 ORDER BY expires_at DESC",
+    )?;
+
+    let rows = stmt.query_map(params![Utc::now()], |row| {
+        let key: String = row.get(0)?;
+        let results_json: String = row.get(1)?;
+        let expires_at: DateTime<Utc> = row.get(2)?;
+        Ok((key, results_json, expires_at))
+    })?;
+
+    let mut searches = Vec::new();
+    for row in rows {
+        let (key, results_json, expires_at) = row?;
+
+        // Parse key to extract query and indexer
+        // Format: "proxied:indexer:query:category" or "native:indexer:query:..."
+        let parts: Vec<&str> = key.split(':').collect();
+        let (indexer, query) = if parts.len() >= 3 {
+            (parts[1].to_string(), parts[2].to_string())
+        } else {
+            ("unknown".to_string(), key.clone())
+        };
+
+        // Count results from JSON
+        let result_count = serde_json::from_str::<Vec<serde_json::Value>>(&results_json)
+            .map(|v| v.len())
+            .unwrap_or(0);
+
+        searches.push(CachedSearch {
+            cache_key: key,
+            query,
+            indexer,
+            expires_at,
+            result_count,
+        });
+    }
+
+    Ok(searches)
+}
+
+/// Get cached results by key (returns raw JSON string)
+pub fn get_cached_results_by_key(pool: &DbPool, key: &str) -> anyhow::Result<Option<String>> {
+    let conn = pool.get()?;
+    let res: Option<String> = conn
+        .query_row(
+            "SELECT results FROM search_cache WHERE key = ?1 AND expires_at > ?2",
+            params![key, Utc::now()],
+            |r| r.get(0),
+        )
+        .optional()?;
+
+    Ok(res)
+}

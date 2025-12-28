@@ -1,23 +1,35 @@
 import { useEffect, useState } from 'react';
-import { Search, Trash2, RefreshCw } from 'lucide-react';
+import { Search, Trash2, RefreshCw, Eye, X, ExternalLink, Magnet, Download } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardTitle, Button, Badge, Spinner } from './ui';
 import toast from 'react-hot-toast';
 
-interface SearchLog {
+interface CachedSearch {
+    cache_key: string;
     query: string;
     indexer: string;
-    timestamp: { secs_since_epoch: number; nanos_since_epoch: number } | string;
+    expires_at: string;
     result_count: number;
 }
 
-interface StatsResponse {
-    recent_searches: SearchLog[];
+interface TorrentResult {
+    title: string;
+    guid: string;
+    link?: string;
+    details?: string;
+    magnet?: string;
+    seeders?: number;
+    leechers?: number;
+    size?: number;
+    indexer?: string;
 }
 
 export default function RecentActivity() {
-    const [searches, setSearches] = useState<SearchLog[]>([]);
+    const [cachedSearches, setCachedSearches] = useState<CachedSearch[]>([]);
     const [loading, setLoading] = useState(true);
     const [clearing, setClearing] = useState(false);
+    const [selectedResults, setSelectedResults] = useState<TorrentResult[] | null>(null);
+    const [selectedQuery, setSelectedQuery] = useState('');
+    const [loadingResults, setLoadingResults] = useState(false);
 
     useEffect(() => {
         loadActivity();
@@ -26,10 +38,11 @@ export default function RecentActivity() {
     const loadActivity = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/stats');
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data: StatsResponse = await res.json();
-            setSearches(data.recent_searches || []);
+            const res = await fetch('/api/history');
+            if (res.ok) {
+                const data: CachedSearch[] = await res.json();
+                setCachedSearches(data);
+            }
         } catch (err) {
             console.error('Failed to load activity:', err);
             toast.error('Failed to load activity.');
@@ -41,30 +54,50 @@ export default function RecentActivity() {
     const clearActivity = async () => {
         setClearing(true);
         try {
-            const res = await fetch('/api/settings/activity/clear', { method: 'POST' });
+            const res = await fetch('/api/settings/cache/clear', { method: 'POST' });
             if (res.ok) {
-                const data = await res.json();
-                toast.success(`Cleared ${data.deleted} activity entries`);
-                setSearches([]);
+                toast.success('Cache cleared');
+                setCachedSearches([]);
             } else {
                 throw new Error('Failed to clear');
             }
         } catch (err) {
-            toast.error('Failed to clear activity');
+            toast.error('Failed to clear cache');
         } finally {
             setClearing(false);
         }
     };
 
-    const recentSearches = searches.map(s => {
-        let ts = 0;
-        if (typeof s.timestamp === 'string') {
-            ts = new Date(s.timestamp).getTime();
-        } else if (s.timestamp && 'secs_since_epoch' in s.timestamp) {
-            ts = s.timestamp.secs_since_epoch * 1000;
+    const viewResults = async (cacheKey: string, query: string) => {
+        setLoadingResults(true);
+        setSelectedQuery(query);
+        try {
+            const encodedKey = encodeURIComponent(cacheKey);
+            const res = await fetch(`/api/history/${encodedKey}`);
+            if (res.ok) {
+                const results: TorrentResult[] = await res.json();
+                setSelectedResults(results);
+            } else {
+                toast.error('Cached results expired or not found');
+            }
+        } catch (err) {
+            toast.error('Failed to load cached results');
+        } finally {
+            setLoadingResults(false);
         }
-        return { ...s, timestamp_ms: ts };
-    }).slice(0, 4);
+    };
+
+    const formatSize = (bytes?: number) => {
+        if (!bytes) return '-';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0;
+        let size = bytes;
+        while (size >= 1024 && i < units.length - 1) {
+            size /= 1024;
+            i++;
+        }
+        return `${size.toFixed(1)} ${units[i]}`;
+    };
 
     if (loading) {
         return (
@@ -75,12 +108,12 @@ export default function RecentActivity() {
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div className="p-6 max-w-6xl mx-auto space-y-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Recent Activity</CardTitle>
+                    <CardTitle>Recent Searches</CardTitle>
                     <div className="flex items-center gap-2">
-                        <Badge variant="neutral">{recentSearches.length} items</Badge>
+                        <Badge variant="neutral">{cachedSearches.length} cached</Badge>
                         <Button
                             variant="secondary"
                             size="sm"
@@ -93,11 +126,11 @@ export default function RecentActivity() {
                             variant="danger"
                             size="sm"
                             onClick={clearActivity}
-                            disabled={clearing || searches.length === 0}
+                            disabled={clearing || cachedSearches.length === 0}
                             loading={clearing}
                         >
                             <Trash2 className="w-4 h-4 mr-1" />
-                            Clear All
+                            Clear
                         </Button>
                     </div>
                 </CardHeader>
@@ -108,34 +141,46 @@ export default function RecentActivity() {
                                 <tr>
                                     <th className="px-6 py-3">Query</th>
                                     <th className="px-6 py-3">Indexer</th>
-                                    <th className="px-6 py-3">Time</th>
-                                    <th className="px-6 py-3 text-right">Results</th>
+                                    <th className="px-6 py-3 text-center">Results</th>
+                                    <th className="px-6 py-3">Expires</th>
+                                    <th className="px-6 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-800 bg-[#1a1a1a]">
-                                {recentSearches.length === 0 ? (
+                                {cachedSearches.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center opacity-50">
+                                        <td colSpan={5} className="px-6 py-12 text-center opacity-50">
                                             <Search className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                            <p>No recent activity</p>
+                                            <p>No recent searches</p>
                                         </td>
                                     </tr>
                                 ) : (
-                                    recentSearches.map((search, idx) => (
+                                    cachedSearches.map((search, idx) => (
                                         <tr key={idx} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-3 font-medium text-white max-w-xs truncate" title={search.query}>
-                                                {search.query}
+                                                {search.query || '(empty)'}
                                             </td>
                                             <td className="px-6 py-3">
                                                 <Badge variant="neutral" size="sm">{search.indexer}</Badge>
                                             </td>
+                                            <td className="px-6 py-3 text-center">
+                                                <Badge variant={search.result_count > 0 ? "success" : "neutral"} size="sm">
+                                                    {search.result_count}
+                                                </Badge>
+                                            </td>
                                             <td className="px-6 py-3 text-neutral-400 font-mono text-xs">
-                                                {new Date(search.timestamp_ms).toLocaleString()}
+                                                {new Date(search.expires_at).toLocaleString()}
                                             </td>
                                             <td className="px-6 py-3 text-right">
-                                                <Badge variant={search.result_count > 0 ? "success" : "neutral"} size="sm">
-                                                    {search.result_count} found
-                                                </Badge>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => viewResults(search.cache_key, search.query)}
+                                                    disabled={search.result_count === 0}
+                                                >
+                                                    <Eye className="w-4 h-4 mr-1" />
+                                                    View
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))
@@ -145,6 +190,108 @@ export default function RecentActivity() {
                     </div>
                 </CardBody>
             </Card>
+
+            {/* Results Modal */}
+            {selectedResults !== null && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#1a1a1a] rounded-lg max-w-5xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between p-4 border-b border-neutral-800">
+                            <h3 className="text-lg font-semibold text-white">
+                                Results: "{selectedQuery || 'Search'}"
+                            </h3>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setSelectedResults(null)}
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        <div className="overflow-auto flex-1 p-4">
+                            {loadingResults ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Spinner size="lg" />
+                                </div>
+                            ) : selectedResults.length === 0 ? (
+                                <div className="text-center py-12 opacity-50">
+                                    <Search className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                                    <p>No results</p>
+                                </div>
+                            ) : (
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-[#262626] text-neutral-400 font-medium sticky top-0">
+                                        <tr>
+                                            <th className="px-4 py-2">Title</th>
+                                            <th className="px-4 py-2 text-center">Size</th>
+                                            <th className="px-4 py-2 text-center">S/L</th>
+                                            <th className="px-4 py-2 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-800">
+                                        {selectedResults.map((result, idx) => (
+                                            <tr key={idx} className="hover:bg-white/5">
+                                                <td className="px-4 py-2 max-w-md">
+                                                    <div className="truncate text-white" title={result.title}>
+                                                        {result.title}
+                                                    </div>
+                                                    {result.indexer && (
+                                                        <div className="mt-1">
+                                                            <Badge variant="neutral" size="sm">
+                                                                {result.indexer}
+                                                            </Badge>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2 text-center text-neutral-400">
+                                                    {formatSize(result.size)}
+                                                </td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <span className="text-green-500">{result.seeders ?? '-'}</span>
+                                                    <span className="text-neutral-500"> / </span>
+                                                    <span className="text-red-500">{result.leechers ?? '-'}</span>
+                                                </td>
+                                                <td className="px-4 py-2 text-right space-x-1">
+                                                    {result.details && (
+                                                        <a
+                                                            href={result.details}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center px-2 py-1 bg-neutral-700 hover:bg-neutral-600 rounded text-xs"
+                                                        >
+                                                            <ExternalLink className="w-3 h-3" />
+                                                        </a>
+                                                    )}
+                                                    {result.magnet && (
+                                                        <a
+                                                            href={result.magnet}
+                                                            className="inline-flex items-center px-2 py-1 bg-purple-600 hover:bg-purple-500 rounded text-xs"
+                                                        >
+                                                            <Magnet className="w-3 h-3" />
+                                                        </a>
+                                                    )}
+                                                    {result.link && !result.link.startsWith('magnet:') && (
+                                                        <a
+                                                            href={result.link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs"
+                                                        >
+                                                            <Download className="w-3 h-3" />
+                                                        </a>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                        <div className="p-4 border-t border-neutral-800 text-center text-neutral-400 text-sm">
+                            {selectedResults.length} results
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

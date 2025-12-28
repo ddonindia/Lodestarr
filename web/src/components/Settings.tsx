@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Globe, Palette, Sliders, ShieldAlert } from 'lucide-react';
+import { Globe, Palette, Sliders } from 'lucide-react';
 import AppearanceSettings from './AppearanceSettings';
 import DownloadSettings from './settings/DownloadSettings';
 import ProxySettings from './settings/ProxySettings';
-import CacheSettings from './settings/CacheSettings';
 
-type TabId = 'general' | 'proxy' | 'appearance' | 'advanced';
+type TabId = 'general' | 'proxy' | 'appearance';
 
 interface SettingTab {
     id: TabId;
@@ -35,12 +34,6 @@ export default function Settings() {
             label: 'Network',
             icon: <Globe size={18} />,
             component: <ProxySettings />
-        },
-        {
-            id: 'advanced',
-            label: 'Advanced',
-            icon: <ShieldAlert size={18} />,
-            component: <CacheSettings />
         }
     ];
 

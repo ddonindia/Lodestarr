@@ -1,7 +1,7 @@
 //! Info and statistics API endpoints
 
 use super::AppState;
-use axum::{Json, extract::State};
+use axum::{Json, extract::State, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::time::SystemTime;
@@ -88,4 +88,58 @@ pub(super) async fn get_stats(State(state): State<AppState>) -> Json<StatsRespon
         avg_search_time_ms,
         recent_searches: recent,
     })
+}
+
+/// Response for cached search list
+#[derive(Serialize)]
+pub(super) struct CachedSearchResponse {
+    pub cache_key: String,
+    pub query: String,
+    pub indexer: String,
+    pub expires_at: DateTime<Utc>,
+    pub result_count: usize,
+}
+
+/// Get list of cached searches
+pub(super) async fn get_history(State(state): State<AppState>) -> Json<Vec<CachedSearchResponse>> {
+    let cached = crate::db::get_cached_search_list(&state.db_pool).unwrap_or_default();
+    let response = cached
+        .into_iter()
+        .map(|c| CachedSearchResponse {
+            cache_key: c.cache_key,
+            query: c.query,
+            indexer: c.indexer,
+            expires_at: c.expires_at,
+            result_count: c.result_count,
+        })
+        .collect();
+    Json(response)
+}
+
+/// Get cached results by key
+pub(super) async fn get_history_results(
+    State(state): State<AppState>,
+    axum::extract::Path(key): axum::extract::Path<String>,
+) -> impl axum::response::IntoResponse {
+    // URL decode the key
+    let decoded_key = urlencoding::decode(&key).unwrap_or(std::borrow::Cow::Borrowed(&key));
+
+    match crate::db::get_cached_results_by_key(&state.db_pool, &decoded_key) {
+        Ok(Some(results_json)) => (
+            axum::http::StatusCode::OK,
+            [(axum::http::header::CONTENT_TYPE, "application/json")],
+            results_json,
+        )
+            .into_response(),
+        Ok(None) => (
+            axum::http::StatusCode::NOT_FOUND,
+            "Cached results not found or expired",
+        )
+            .into_response(),
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error: {}", e),
+        )
+            .into_response(),
+    }
 }
