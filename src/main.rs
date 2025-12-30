@@ -1,3 +1,4 @@
+mod clients;
 mod config;
 mod db;
 mod download;

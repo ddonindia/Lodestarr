@@ -18,6 +18,10 @@ pub struct Config {
     #[serde(default)]
     pub native_settings:
         std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+
+    /// Configured download clients
+    #[serde(default)]
+    pub download_clients: Vec<DownloadClient>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +29,27 @@ pub struct IndexerConfig {
     pub name: String,
     pub url: String,
     pub apikey: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ClientType {
+    TorrServer,
+    QBittorrent,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadClient {
+    #[serde(default = "default_client_id")]
+    pub id: String,
+    pub name: String,
+    pub client_type: ClientType,
+    pub url: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
+
+fn default_client_id() -> String {
+    uuid::Uuid::new_v4().to_string()
 }
 
 impl Config {

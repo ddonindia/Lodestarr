@@ -6,6 +6,7 @@
 //! - Torznab API compatibility
 //! - Native indexer operations
 
+mod api_clients;
 mod api_indexers;
 mod api_info;
 mod api_native;
@@ -21,6 +22,7 @@ use tokio::sync::RwLock;
 use tower_http::trace::TraceLayer;
 
 // Handlers are used directly via module paths (e.g., api_info::api_info)
+use api_clients::*;
 use api_indexers::*;
 use api_info::{api_info, get_history, get_history_results, get_stats};
 use api_native::*;
@@ -193,6 +195,19 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
         .route(
             "/api/torrent/meta",
             axum::routing::post(get_torrent_metadata),
+        )
+        // Client Management
+        .route(
+            "/api/settings/clients",
+            axum::routing::get(list_clients).post(add_client),
+        )
+        .route(
+            "/api/settings/clients/{id}",
+            axum::routing::delete(remove_client),
+        )
+        .route(
+            "/api/clients/{id}/send",
+            axum::routing::post(send_to_client),
         )
         .with_state(state)
         .fallback(static_handler)
