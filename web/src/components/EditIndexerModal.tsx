@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    indexer: any;
+    indexer: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     onSave: () => void;
 }
 

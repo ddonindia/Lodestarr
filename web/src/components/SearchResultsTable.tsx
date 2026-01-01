@@ -1,5 +1,4 @@
 
-import React from 'react';
 import type { TorrentResult, SortField } from '../types';
 import {
     getResultTitle,
@@ -12,6 +11,8 @@ import {
     getResultMagnet,
     getResultIndexerId
 } from '../types';
+import { formatSize, formatDate } from '../utils/formatters';
+import { buttonSecondaryStyle } from '../styles/shared';
 
 interface SearchResultsTableProps {
     results: TorrentResult[];
@@ -45,27 +46,6 @@ export default function SearchResultsTable({
     onSendToClient
 }: SearchResultsTableProps) {
 
-    const formatSize = (bytes: number) => {
-        if (!bytes) return '-';
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        let i = 0;
-        let size = bytes;
-        while (size >= 1024 && i < units.length - 1) {
-            size /= 1024;
-            i++;
-        }
-        return `${size.toFixed(1)} ${units[i]}`;
-    };
-
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '-';
-        try {
-            return new Date(dateStr).toLocaleDateString();
-        } catch {
-            return dateStr;
-        }
-    };
-
     const SortIcon = ({ field }: { field: SortField }) => {
         if (variant !== 'full' || !onSort) return null;
         if (sortField !== field) return <span className="ml-1 opacity-20">↕</span>;
@@ -78,12 +58,6 @@ export default function SearchResultsTable({
         if (variant === 'full' && onSort) {
             onSort(field);
         }
-    };
-
-    const buttonSecondaryStyle: React.CSSProperties = {
-        backgroundColor: 'var(--theme-card)',
-        border: '1px solid var(--theme-border)',
-        color: 'inherit',
     };
 
     return (

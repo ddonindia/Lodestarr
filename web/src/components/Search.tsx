@@ -1,10 +1,15 @@
 
 import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
-import type { TorrentResult, IndexerDefinition, SortField, TorrentMetadata } from '../types';
+import type { TorrentResult, IndexerDefinition, SortField } from '../types';
 import SearchResultsTable from './SearchResultsTable';
 import SearchResultsList from './SearchResultsList';
 import ResultDetailsModal from './ResultDetailsModal';
+import { SearchFiltersBar, SearchPagination } from './search';
+import { useDownloadClients } from '../hooks/useDownloadClients';
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+import { useTorrentMeta } from '../hooks/useTorrentMeta';
+import { TORZNAB_CATEGORIES } from '../constants/categories';
+import { inputStyle, buttonPrimaryStyle } from '../styles/shared';
 
 interface Category {
     id: number;
@@ -19,43 +24,6 @@ interface NativeIndexer {
     indexer_type: string;
     categories: number[];
 }
-
-const TORZNAB_CATEGORIES: Record<number, string> = {
-    // Console
-    1000: "Console", 1010: "NDS", 1020: "PSP", 1030: "Wii", 1040: "Xbox", 1050: "Xbox 360", 1060: "Wiiware", 1070: "Xbox 360 DLC", 1080: "PS3", 1090: "Other", 1110: "3DS", 1120: "PS Vita", 1130: "WiiU", 1140: "Xbox One", 1180: "PS4",
-    // Movies
-    2000: "Movies", 2010: "Movies/Foreign", 2020: "Movies/Other", 2030: "Movies/SD", 2040: "Movies/HD", 2045: "Movies/UHD", 2050: "Movies/BluRay", 2060: "Movies/3D", 2070: "Movies/DVD", 2080: "Movies/WEB-DL",
-    // Audio
-    3000: "Audio", 3010: "Audio/MP3", 3020: "Audio/Video", 3030: "Audio/Audiobook", 3040: "Audio/Lossless", 3050: "Audio/Other", 3060: "Audio/Foreign",
-    // PC
-    4000: "PC", 4010: "PC/0day", 4020: "PC/ISO", 4030: "PC/Mac", 4040: "PC/Mobile-Other", 4050: "PC/Games", 4060: "PC/Mobile-iOS", 4070: "PC/Mobile-Android",
-    // TV
-    5000: "TV", 5010: "TV/WEB-DL", 5020: "TV/Foreign", 5030: "TV/SD", 5040: "TV/HD", 5045: "TV/UHD", 5050: "TV/Other", 5060: "TV/Sport", 5070: "TV/Anime", 5080: "TV/Documentary",
-    // XXX
-    6000: "XXX", 6010: "XXX/DVD", 6020: "XXX/WMV", 6030: "XXX/XviD", 6040: "XXX/x264", 6050: "XXX/Other", 6060: "XXX/ImageSet", 6070: "XXX/Packs",
-    // Books
-    7000: "Books", 7010: "Books/Mags", 7020: "Books/EBook", 7030: "Books/Comics", 7040: "Books/Technical", 7050: "Books/Other", 7060: "Books/Foreign",
-    // Other
-    8000: "Other", 8010: "Other/Misc", 8020: "Other/Hashed"
-};
-
-// Shared input style object using CSS variables
-const inputStyle: React.CSSProperties = {
-    backgroundColor: 'var(--theme-card)',
-    border: '1px solid var(--theme-border)',
-    color: 'inherit',
-};
-
-const buttonPrimaryStyle: React.CSSProperties = {
-    backgroundColor: 'var(--theme-accent)',
-    color: 'white',
-};
-
-const buttonSecondaryStyle: React.CSSProperties = {
-    backgroundColor: 'var(--theme-card)',
-    border: '1px solid var(--theme-border)',
-    color: 'inherit',
-};
 
 export default function Search() {
     const [query, setQuery] = useState('');
@@ -75,8 +43,11 @@ export default function Search() {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterIndexer, setFilterIndexer] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [downloading, setDownloading] = useState<string | null>(null);
-    const [downloadConfigured, setDownloadConfigured] = useState(false);
+
+    // Use the shared hooks
+    const { clients, handleSendToClient, downloadConfigured, downloading, handleServerDownload } = useDownloadClients();
+    const { copiedField, copyToClipboard } = useCopyToClipboard();
+    const { torrentMeta, loadingMeta, fetchTorrentMeta, clearMeta } = useTorrentMeta();
 
     // Sorting
     const [sortField, setSortField] = useState<SortField | null>(null);
@@ -84,83 +55,7 @@ export default function Search() {
 
     // Inspect modal state
     const [inspectedResult, setInspectedResult] = useState<TorrentResult | null>(null);
-    const [copiedField, setCopiedField] = useState<string | null>(null);
-    const [torrentMeta, setTorrentMeta] = useState<TorrentMetadata | null>(null);
-    const [loadingMeta, setLoadingMeta] = useState(false);
 
-    // Copy to clipboard
-    const copyToClipboard = async (text: string, field: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            setCopiedField(field);
-            setTimeout(() => setCopiedField(null), 2000);
-        } catch {
-            console.error('Failed to copy');
-        }
-    };
-
-    // Download Clients
-    interface DownloadClient {
-        id: string;
-        name: string;
-    }
-    const [clients, setClients] = useState<DownloadClient[]>([]);
-
-    useEffect(() => {
-        fetch('/api/settings/clients')
-            .then(res => res.json())
-            .then(data => setClients(data))
-            .catch(err => console.error('Failed to load clients', err));
-    }, []);
-
-    const handleSendToClient = async (clientId: string, magnet: string, title: string) => {
-        if (!magnet) return;
-        const toastId = toast.loading(`Sending "${title}"...`);
-        try {
-            const res = await fetch(`/api/clients/${clientId}/send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ magnet })
-            });
-
-            if (res.ok) {
-                toast.success('Sent to client', { id: toastId });
-            } else {
-                throw new Error('Failed to send');
-            }
-        } catch (err) {
-            toast.error('Failed to send torrent', { id: toastId });
-        }
-    };
-
-    // Fetch torrent metadata from backend
-    const fetchTorrentMeta = async (url: string) => {
-        setLoadingMeta(true);
-        setTorrentMeta(null);
-        try {
-            const res = await fetch('/api/torrent/meta', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setTorrentMeta(data);
-            }
-        } catch (err) {
-            console.error('Failed to fetch torrent metadata', err);
-        } finally {
-            setLoadingMeta(false);
-        }
-    };
-
-    useEffect(() => {
-        // Check if download path matches
-        fetch('/api/settings/download')
-            .then(res => res.json())
-            .then(data => setDownloadConfigured(!!data.path))
-            .catch(() => { });
-    }, []);
     const itemsPerPage = 25;
 
     // Fetch available indexers on mount
@@ -318,29 +213,6 @@ export default function Search() {
         }
     };
 
-    const handleServerDownload = async (link: string, title: string) => {
-        if (!link) return;
-        setDownloading(link);
-        try {
-            const res = await fetch('/api/download', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    url: link,
-                    title: title
-                })
-            });
-
-            if (!res.ok) {
-                console.error('Download failed');
-            }
-        } catch (err) {
-            console.error('Download error', err);
-        } finally {
-            setDownloading(null);
-        }
-    };
-
     const resultIndexers = Array.from(new Set(results.map(r => r.Indexer || 'Unknown').filter(Boolean))).sort();
 
     const handleSort = (field: SortField) => {
@@ -475,101 +347,26 @@ export default function Search() {
                     </div>
                 </div>
 
-                {/* Filters Row - Horizontally scrollable on mobile */}
-                <div className="flex gap-2 items-center p-2 rounded-lg overflow-x-auto scrollbar-hide" style={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-border)' }}>
-                    <span className="text-xs lg:text-sm opacity-60 px-2 font-medium whitespace-nowrap">Filter:</span>
+                {/* Filters Row */}
+                <SearchFiltersBar
+                    filterIndexer={filterIndexer}
+                    setFilterIndexer={setFilterIndexer}
+                    filterCategory={filterCategory}
+                    setFilterCategory={setFilterCategory}
+                    filterText={filterText}
+                    setFilterText={setFilterText}
+                    resultIndexers={resultIndexers}
+                    results={results}
+                />
 
-                    <div className="relative">
-                        <select
-                            id="filter-indexer-select"
-                            data-testid="filter-indexer-select"
-                            value={filterIndexer}
-                            onChange={(e) => setFilterIndexer(e.target.value)}
-                            className="rounded-md pl-2 pr-8 py-1.5 text-sm outline-none appearance-none cursor-pointer transition-colors"
-                            style={{ ...inputStyle, maxWidth: '160px' }}
-                        >
-                            <option value="">All Indexers</option>
-                            {resultIndexers.map(idx => (
-                                <option key={idx} value={idx}>{idx}</option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 opacity-50">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
-
-                    <div className="relative">
-                        <select
-                            id="filter-category-select"
-                            data-testid="filter-category-select"
-                            value={filterCategory}
-                            onChange={(e) => setFilterCategory(e.target.value)}
-                            className="rounded-md pl-2 pr-8 py-1.5 text-sm outline-none appearance-none cursor-pointer transition-colors"
-                            style={{ ...inputStyle, maxWidth: '160px' }}
-                        >
-                            <option value="">All Categories</option>
-                            {Array.from(new Set(results.flatMap(r => r.Category || []))).sort((a, b) => a - b).map(catId => (
-                                <option key={catId} value={catId}>{TORZNAB_CATEGORIES[catId] || catId}</option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 opacity-50">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
-
-                    <div className="hidden sm:block w-px h-6 opacity-30" style={{ backgroundColor: 'var(--theme-border)' }}></div>
-
-                    <div className="relative">
-                        <input
-                            id="filter-text-input"
-                            data-testid="filter-text-input"
-                            type="text"
-                            value={filterText}
-                            onChange={(e) => setFilterText(e.target.value)}
-                            placeholder="Text filter..."
-                            className="rounded-md pl-8 pr-3 py-1.5 text-sm outline-none w-40 lg:w-64"
-                            style={inputStyle}
-                        />
-                        <svg className="absolute left-2.5 top-2 h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </div>
-                </div>
-
-                {results.length > 0 && (
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs lg:text-sm opacity-60 px-1">
-                        <div>Found {results.length} results</div>
-                        <div className="flex items-center gap-2 pr-2">
-                            <span className="text-sm mr-2">
-                                Page {currentPage} of {totalPages || 1} ({filteredAndSortedResults.length} filtered)
-                            </span>
-                            <button
-                                id="prev-page-button"
-                                data-testid="prev-page-button"
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
-                                style={buttonSecondaryStyle}
-                            >
-                                Prev
-                            </button>
-                            <button
-                                id="next-page-button"
-                                data-testid="next-page-button"
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage >= totalPages}
-                                className="px-3 py-1.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
-                                style={buttonSecondaryStyle}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
-                )}
+                {/* Pagination */}
+                <SearchPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalResults={results.length}
+                    filteredCount={filteredAndSortedResults.length}
+                    onPageChange={setCurrentPage}
+                />
             </div>
 
             {error && (
@@ -594,7 +391,6 @@ export default function Search() {
                         downloadingId={downloading}
                         clients={clients}
                         onSendToClient={handleSendToClient}
-                        TORZNAB_CATEGORIES={TORZNAB_CATEGORIES}
                     />
                 )}
             </div>
@@ -621,13 +417,18 @@ export default function Search() {
                 result={inspectedResult}
                 onClose={() => {
                     setInspectedResult(null);
-                    setTorrentMeta(null);
+                    clearMeta();
                 }}
                 onCopyToClipboard={copyToClipboard}
                 copiedField={copiedField}
                 onFetchMeta={fetchTorrentMeta}
                 loadingMeta={loadingMeta}
                 torrentMeta={torrentMeta}
+                clients={clients}
+                onSendToClient={handleSendToClient}
+                downloadConfigured={downloadConfigured}
+                onDownload={handleServerDownload}
+                downloadingId={downloading}
             />
         </div>
     );

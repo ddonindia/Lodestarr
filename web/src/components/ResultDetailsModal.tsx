@@ -1,5 +1,5 @@
 
-import { X, Info, Check, Copy, Magnet, Download, ExternalLink } from 'lucide-react';
+import { X, Info, Check, Copy, Magnet, Download, ExternalLink, Send, Server } from 'lucide-react';
 import { Button } from './ui';
 import type { TorrentResult, TorrentMetadata } from '../types';
 import {
@@ -14,6 +14,7 @@ import {
     getResultDetails,
     getResultIndexerId
 } from '../types';
+import { formatSize } from '../utils/formatters';
 
 interface ResultDetailsModalProps {
     result: TorrentResult | null;
@@ -25,6 +26,13 @@ interface ResultDetailsModalProps {
     onFetchMeta?: (url: string) => void;
     loadingMeta?: boolean;
     torrentMeta?: TorrentMetadata | null;
+
+    // Optional props for Send to Client and Download to Server
+    clients?: { id: string; name: string }[];
+    onSendToClient?: (clientId: string, magnet: string, title: string) => void;
+    downloadConfigured?: boolean;
+    onDownload?: (link: string, title: string) => void;
+    downloadingId?: string | null;
 }
 
 export default function ResultDetailsModal({
@@ -34,22 +42,15 @@ export default function ResultDetailsModal({
     copiedField,
     onFetchMeta,
     loadingMeta = false,
-    torrentMeta
+    torrentMeta,
+    clients = [],
+    onSendToClient,
+    downloadConfigured = false,
+    onDownload,
+    downloadingId = null
 }: ResultDetailsModalProps) {
 
     if (!result) return null;
-
-    const formatSize = (bytes: number) => {
-        if (!bytes) return '-';
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        let i = 0;
-        let size = bytes;
-        while (size >= 1024 && i < units.length - 1) {
-            size /= 1024;
-            i++;
-        }
-        return `${size.toFixed(1)} ${units[i]}`;
-    };
 
     const title = getResultTitle(result);
     const size = getResultSize(result);
@@ -269,6 +270,69 @@ export default function ResultDetailsModal({
                                 >
                                     <ExternalLink className="w-4 h-4" />
                                 </a>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    {(link || magnet) && (clients.length > 0 || downloadConfigured) && (
+                        <div className="pt-4 border-t border-neutral-700">
+                            <label className="block text-xs text-neutral-400 mb-2">Quick Actions</label>
+                            <div className="flex flex-wrap gap-2">
+                                {/* Download to Server */}
+                                {downloadConfigured && link && onDownload && (
+                                    <button
+                                        onClick={() => onDownload(link, title)}
+                                        disabled={downloadingId === link}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        {downloadingId === link ? (
+                                            <>
+                                                <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full"></div>
+                                                Downloading...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Server className="w-4 h-4" />
+                                                Download to Server
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+
+                                {/* Send to Client - Single client */}
+                                {clients.length === 1 && onSendToClient && (magnet || link) && (
+                                    <button
+                                        onClick={() => onSendToClient(clients[0].id, magnet || link || '', title)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                        Send to {clients[0].name}
+                                    </button>
+                                )}
+
+                                {/* Send to Client - Multiple clients dropdown */}
+                                {clients.length > 1 && onSendToClient && (magnet || link) && (
+                                    <div className="relative">
+                                        <select
+                                            className="appearance-none flex items-center gap-2 px-4 py-2 pr-10 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors cursor-pointer text-white"
+                                            style={{ backgroundColor: '#059669' }}
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    onSendToClient(e.target.value, magnet || link || '', title);
+                                                    e.target.value = '';
+                                                }
+                                            }}
+                                            defaultValue=""
+                                        >
+                                            <option value="" disabled className="bg-neutral-800 text-white">Send to Client...</option>
+                                            {clients.map(c => (
+                                                <option key={c.id} value={c.id} className="bg-neutral-800 text-white">{c.name}</option>
+                                            ))}
+                                        </select>
+                                        <Send className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

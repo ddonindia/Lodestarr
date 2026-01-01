@@ -12,6 +12,8 @@ import {
     getResultLink,
     getResultMagnet
 } from '../types';
+import { formatSize, formatDate } from '../utils/formatters';
+import { TORZNAB_CATEGORIES } from '../constants/categories';
 
 interface SearchResultsListProps {
     results: TorrentResult[];
@@ -23,7 +25,6 @@ interface SearchResultsListProps {
     downloadingId?: string | null;
     clients: { id: string; name: string }[];
     onSendToClient: (clientId: string, magnet: string, title: string) => void;
-    TORZNAB_CATEGORIES: Record<number, string>;
 }
 
 export default function SearchResultsList({
@@ -35,30 +36,8 @@ export default function SearchResultsList({
     onDownload,
     downloadingId = null,
     clients,
-    onSendToClient,
-    TORZNAB_CATEGORIES
+    onSendToClient
 }: SearchResultsListProps) {
-
-    const formatSize = (bytes: number) => {
-        if (!bytes) return '-';
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        let i = 0;
-        let size = bytes;
-        while (size >= 1024 && i < units.length - 1) {
-            size /= 1024;
-            i++;
-        }
-        return `${size.toFixed(1)} ${units[i]}`;
-    };
-
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '-';
-        try {
-            return new Date(dateStr).toLocaleDateString();
-        } catch {
-            return dateStr;
-        }
-    };
 
     if (loading) {
         return <div className="text-center py-8 opacity-50">Loading results...</div>;

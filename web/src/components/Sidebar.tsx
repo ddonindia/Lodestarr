@@ -1,8 +1,10 @@
 import { LayoutDashboard, Search, Database, Settings, Activity, Heart } from 'lucide-react';
 
+export type View = 'dashboard' | 'search' | 'indexers' | 'activity' | 'settings';
+
 interface SidebarProps {
-    currentView: string;
-    setView: (view: any) => void;
+    currentView: View;
+    setView: (view: View) => void;
 }
 
 export default function Sidebar({ currentView, setView }: SidebarProps) {
@@ -39,7 +41,7 @@ export default function Sidebar({ currentView, setView }: SidebarProps) {
                     {navItems.map(item => (
                         <button
                             key={item.id}
-                            onClick={() => setView(item.id)}
+                            onClick={() => setView(item.id as View)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-all`}
                             style={{
                                 backgroundColor: currentView === item.id ? 'var(--theme-accent)' : 'transparent',
@@ -82,7 +84,7 @@ export default function Sidebar({ currentView, setView }: SidebarProps) {
                     {navItems.map(item => (
                         <button
                             key={item.id}
-                            onClick={() => setView(item.id)}
+                            onClick={() => setView(item.id as View)}
                             className="flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-lg transition-all min-w-[60px]"
                             style={{
                                 backgroundColor: currentView === item.id ? 'var(--theme-accent)' : 'transparent',

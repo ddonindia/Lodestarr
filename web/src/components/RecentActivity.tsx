@@ -6,6 +6,9 @@ import toast from 'react-hot-toast';
 import type { TorrentResult } from '../types';
 import SearchResultsTable from './SearchResultsTable';
 import ResultDetailsModal from './ResultDetailsModal';
+import { useDownloadClients } from '../hooks/useDownloadClients';
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+import { useTorrentMeta } from '../hooks/useTorrentMeta';
 
 interface CachedSearch {
     cache_key: string;
@@ -23,19 +26,14 @@ export default function RecentActivity() {
     const [selectedQuery, setSelectedQuery] = useState('');
     const [loadingResults, setLoadingResults] = useState(false);
     const [inspectedResult, setInspectedResult] = useState<TorrentResult | null>(null);
-    const [copiedField, setCopiedField] = useState<string | null>(null);
 
-    // Download state for shared table compatibility
-    const [downloadConfigured, setDownloadConfigured] = useState(false);
-    const [downloading, setDownloading] = useState<string | null>(null);
+    // Use the shared hooks
+    const { clients, handleSendToClient, downloadConfigured, downloading, handleServerDownload } = useDownloadClients();
+    const { copiedField, copyToClipboard } = useCopyToClipboard();
+    const { torrentMeta, loadingMeta, fetchTorrentMeta } = useTorrentMeta();
 
     useEffect(() => {
         loadActivity();
-        // Check if download path matches (for shared table compatibility)
-        fetch('/api/settings/download')
-            .then(res => res.json())
-            .then(data => setDownloadConfigured(!!data.path))
-            .catch(() => { });
     }, []);
 
     const loadActivity = async () => {
@@ -87,44 +85,6 @@ export default function RecentActivity() {
             toast.error('Failed to load cached results');
         } finally {
             setLoadingResults(false);
-        }
-    };
-
-    const copyToClipboard = async (text: string, field: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            setCopiedField(field);
-            setTimeout(() => setCopiedField(null), 2000);
-            toast.success('Copied to clipboard');
-        } catch {
-            toast.error('Failed to copy');
-        }
-    };
-
-    const handleServerDownload = async (link: string, title: string) => {
-        if (!link) return;
-        setDownloading(link);
-        try {
-            const res = await fetch('/api/download', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    url: link,
-                    title: title
-                })
-            });
-
-            if (!res.ok) {
-                console.error('Download failed');
-                toast.error('Download failed');
-            } else {
-                toast.success('Download started');
-            }
-        } catch (err) {
-            console.error('Download error', err);
-            toast.error('Download error');
-        } finally {
-            setDownloading(null);
         }
     };
 
@@ -254,6 +214,8 @@ export default function RecentActivity() {
                                     downloadConfigured={downloadConfigured}
                                     downloadingId={downloading}
                                     variant="simple"
+                                    clients={clients}
+                                    onSendToClient={handleSendToClient}
                                 />
                             )}
                         </div>
@@ -270,6 +232,14 @@ export default function RecentActivity() {
                 onClose={() => setInspectedResult(null)}
                 onCopyToClipboard={copyToClipboard}
                 copiedField={copiedField}
+                clients={clients}
+                onSendToClient={handleSendToClient}
+                downloadConfigured={downloadConfigured}
+                onDownload={handleServerDownload}
+                downloadingId={downloading}
+                onFetchMeta={fetchTorrentMeta}
+                loadingMeta={loadingMeta}
+                torrentMeta={torrentMeta}
             />
         </div>
     );
