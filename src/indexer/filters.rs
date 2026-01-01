@@ -907,4 +907,67 @@ mod tests {
         // Empty pattern returns value unchanged
         assert_eq!(filter_validate("test", &FilterArgs::None), "test");
     }
+
+    #[test]
+    fn test_stripcyrillic() {
+        // Should remove Cyrillic characters
+        assert_eq!(filter_stripcyrillic("Hello Мир World"), "Hello World");
+        assert_eq!(filter_stripcyrillic("Привет"), "");
+        assert_eq!(filter_stripcyrillic("Test123"), "Test123");
+        // Mixed content
+        assert_eq!(
+            filter_stripcyrillic("Movie Название 2025"),
+            "Movie 2025"
+        );
+    }
+
+    #[test]
+    fn test_addrussiantotitle() {
+        // Should add [RUS] to titles with Cyrillic
+        assert_eq!(
+            filter_addrussiantotitle("Фильм Movie 2025"),
+            "Фильм Movie 2025 [RUS]"
+        );
+        // Should not add if already has [RUS]
+        assert_eq!(
+            filter_addrussiantotitle("Movie [RUS]"),
+            "Movie [RUS]"
+        );
+        // Should not add to English-only titles
+        assert_eq!(
+            filter_addrussiantotitle("English Movie 2025"),
+            "English Movie 2025"
+        );
+    }
+
+    #[test]
+    fn test_addukrainiantotitle() {
+        // Should add [UKR] to titles with Cyrillic
+        assert_eq!(
+            filter_addukrainiantotitle("Фільм Movie 2025"),
+            "Фільм Movie 2025 [UKR]"
+        );
+        // Should not add if already has [UKR]
+        assert_eq!(
+            filter_addukrainiantotitle("Movie [UKR]"),
+            "Movie [UKR]"
+        );
+    }
+
+    #[test]
+    fn test_filter_name_with_comment() {
+        // Filter names with # comments should work
+        let filter = Filter {
+            name: "re_replace#S01toсезон1".to_string(),
+            args: FilterArgs::Array(vec!["S(\\d+)".to_string(), "сезон $1".to_string()]),
+        };
+        assert_eq!(apply_filter("S01", &filter), "сезон 01");
+
+        // Another example with replace
+        let filter2 = Filter {
+            name: "replace#removethepostedontag".to_string(),
+            args: FilterArgs::Array(vec!["Posted on".to_string(), "".to_string()]),
+        };
+        assert_eq!(apply_filter("Posted on 2025", &filter2), " 2025");
+    }
 }

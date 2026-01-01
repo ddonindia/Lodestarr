@@ -43,12 +43,12 @@ export default function NativeIndexers() {
 
             if (localRes.ok) {
                 const data = await localRes.json();
-                setLocalIndexers((data.indexers || []).map((i: any) => ({ ...i, isNative: true })));
+                setLocalIndexers((data.indexers || []).map((i: LocalIndexer) => ({ ...i, isNative: true as const })));
             }
 
             if (proxiedRes.ok) {
                 const data = await proxiedRes.json();
-                const list = (data.indexers || []).map((i: any) => ({
+                const list = (data.indexers || []).map((i: { id: number | string; name: string; description?: string; enabled: boolean; url?: string }) => ({
                     id: String(i.id),
                     name: i.name,
                     description: i.description || 'Torznab Proxy',
@@ -183,8 +183,9 @@ export default function NativeIndexers() {
             const res = await fetch(`/api/native/${indexer.id}/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
             const data = await res.json();
             data.success ? toast.success(data.message) : toast.error(data.message);
-        } catch (e: any) {
-            toast.error(e.message || 'Test failed');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Test failed';
+            toast.error(message);
         } finally {
             setTestingId(null);
         }

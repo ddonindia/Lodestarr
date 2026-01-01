@@ -35,8 +35,9 @@ export default function AddIndexerForm({ onSuccess }: AddIndexerFormProps) {
                 throw new Error(txt || 'Test failed');
             }
             toast.success('Connection successful! ✅');
-        } catch (e: any) {
-            toast.error(e.message || 'Connection failed');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Connection failed';
+            toast.error(message);
         } finally {
             setTesting(false);
         }
@@ -61,8 +62,9 @@ export default function AddIndexerForm({ onSuccess }: AddIndexerFormProps) {
             toast.success('Indexer added successfully');
             setForm({ name: '', url: '', apikey: '' });
             onSuccess();
-        } catch (e: any) {
-            toast.error(e.message || 'Failed to add indexer');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to add indexer';
+            toast.error(message);
         } finally {
             setSaving(false);
         }

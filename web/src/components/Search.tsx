@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import type { TorrentResult, IndexerDefinition, SortField } from '../types';
+import type { NativeSearchResult } from '../types/api';
 import SearchResultsTable from './SearchResultsTable';
 import SearchResultsList from './SearchResultsList';
 import ResultDetailsModal from './ResultDetailsModal';
@@ -169,20 +170,20 @@ export default function Search() {
                 const data = await res.json();
 
                 if (Array.isArray(data)) {
-                    searchResults = (data || []).map((r: any) => ({
+                    searchResults = (data || []).map((r: NativeSearchResult) => ({
                         Title: r.title,
-                        Link: r.link || r.magnet,
+                        Link: r.link || r.magnet || '',
                         Magnet: r.magnet,
-                        Size: r.size,
-                        Seeders: r.seeders,
-                        Peers: r.leechers,
-                        Indexer: r.indexer,
-                        IndexerId: r.indexer_id,  // Added for proxy download URLs
-                        PublishDate: r.publish_date,
+                        Size: r.size ?? null,
+                        Seeders: r.seeders ?? null,
+                        Peers: r.leechers ?? null,
+                        Indexer: r.indexer ?? null,
+                        IndexerId: r.indexer_id ?? null,
+                        PublishDate: r.publish_date ?? null,
                         Category: r.categories || [],
-                        Comments: r.comments || r.guid,
-                        Guid: r.guid,
-                        Grabs: r.grabs || 0
+                        Comments: r.comments || r.guid || '',
+                        Guid: r.guid || r.title,
+                        Grabs: r.grabs ?? 0
                     }));
                 }
             } else {
@@ -197,7 +198,7 @@ export default function Search() {
 
                     return fetch(`/api/v2.0/indexers/${id}/results?${params.toString()}`)
                         .then(r => r.json())
-                        .then(data => (data.results || []).map((r: any) => ({ ...r, Indexer: indexers.find(i => i.id === id)?.name })))
+                        .then(data => (data.results || []).map((r: TorrentResult) => ({ ...r, Indexer: indexers.find(i => i.id === id)?.name })))
                         .catch(() => []);
                 });
 
@@ -206,8 +207,9 @@ export default function Search() {
             }
 
             setResults(searchResults);
-        } catch (err: any) {
-            setError(err.message || 'Search failed');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Search failed';
+            setError(message);
         } finally {
             setLoading(false);
         }
