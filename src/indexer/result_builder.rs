@@ -103,25 +103,90 @@ fn parse_numeric_field(value: &str) -> Option<u32> {
     value.replace(',', "").parse().ok()
 }
 
-/// Parse date field with multiple format support
+/// Parse date field with multiple format support including relative times
 fn parse_date_field(date_str: &str) -> Option<DateTime<Utc>> {
+    let trimmed = date_str.trim();
+    
     // Try RFC3339
-    if let Ok(date) = DateTime::parse_from_rfc3339(date_str) {
+    if let Ok(date) = DateTime::parse_from_rfc3339(trimmed) {
         return Some(date.with_timezone(&Utc));
     }
 
     // Try RFC2822
-    if let Ok(date) = DateTime::parse_from_rfc2822(date_str) {
+    if let Ok(date) = DateTime::parse_from_rfc2822(trimmed) {
         return Some(date.with_timezone(&Utc));
     }
 
     // Try Unix timestamp
-    if let Ok(timestamp) = date_str.parse::<i64>()
-        && let Some(date) = DateTime::from_timestamp(timestamp, 0)
-    {
-        return Some(date);
+    if let Ok(timestamp) = trimmed.parse::<i64>() {
+        if let Some(date) = DateTime::from_timestamp(timestamp, 0) {
+            return Some(date);
+        }
     }
 
+    // Try relative time parsing (e.g., "5 hours ago", "2d", "yesterday")
+    parse_relative_time(trimmed)
+}
+
+/// Parse relative time expressions like "5 hours ago", "2d", "yesterday"
+fn parse_relative_time(value: &str) -> Option<DateTime<Utc>> {
+    use regex::Regex;
+    use once_cell::sync::Lazy;
+    
+    static RE_TIMEAGO: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*(?:ago)?")
+            .expect("invalid timeago regex")
+    });
+    
+    let now = Utc::now();
+    let lower = value.to_lowercase();
+    let lower = lower.trim();
+    
+    // Handle "yesterday", "today"
+    if lower.contains("yesterday") {
+        return Some(now - chrono::Duration::days(1));
+    }
+    if lower.contains("today") || lower.contains("just now") || lower == "now" {
+        return Some(now);
+    }
+    
+    // Handle short formats like "5h", "2d", "1w"
+    static RE_SHORT: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"^(\d+)\s*([smhdwy])").expect("invalid short time regex")
+    });
+    
+    if let Some(caps) = RE_SHORT.captures(lower) {
+        let amount: i64 = caps[1].parse().unwrap_or(0);
+        let unit = &caps[2];
+        let duration = match unit {
+            "s" => chrono::Duration::seconds(amount),
+            "m" => chrono::Duration::minutes(amount),
+            "h" => chrono::Duration::hours(amount),
+            "d" => chrono::Duration::days(amount),
+            "w" => chrono::Duration::weeks(amount),
+            "y" => chrono::Duration::days(amount * 365),
+            _ => return None,
+        };
+        return Some(now - duration);
+    }
+    
+    // Handle "X unit(s) ago" patterns
+    if let Some(caps) = RE_TIMEAGO.captures(lower) {
+        let amount: i64 = caps[1].parse().unwrap_or(0);
+        let unit = &caps[2];
+        let duration = match unit {
+            "second" => chrono::Duration::seconds(amount),
+            "minute" => chrono::Duration::minutes(amount),
+            "hour" => chrono::Duration::hours(amount),
+            "day" => chrono::Duration::days(amount),
+            "week" => chrono::Duration::weeks(amount),
+            "month" => chrono::Duration::days(amount * 30),
+            "year" => chrono::Duration::days(amount * 365),
+            _ => return None,
+        };
+        return Some(now - duration);
+    }
+    
     None
 }
 
