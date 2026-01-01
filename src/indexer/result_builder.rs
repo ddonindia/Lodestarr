@@ -118,10 +118,10 @@ fn parse_date_field(date_str: &str) -> Option<DateTime<Utc>> {
     }
 
     // Try Unix timestamp
-    if let Ok(timestamp) = trimmed.parse::<i64>() {
-        if let Some(date) = DateTime::from_timestamp(timestamp, 0) {
-            return Some(date);
-        }
+    if let Ok(timestamp) = trimmed.parse::<i64>()
+        && let Some(date) = DateTime::from_timestamp(timestamp, 0)
+    {
+        return Some(date);
     }
 
     // Try relative time parsing (e.g., "5 hours ago", "2d", "yesterday")

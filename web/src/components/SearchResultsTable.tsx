@@ -67,6 +67,7 @@ export default function SearchResultsTable({
                     <thead className="bg-[#262626] text-neutral-400 font-medium border-b border-neutral-800">
                         <tr className="uppercase text-xs font-semibold tracking-wider">
                             <th
+                                data-testid="sort-indexer"
                                 className={`px-6 py-4 select-none transition-colors ${variant === 'full' ? 'cursor-pointer hover:text-white' : ''}`}
                                 onClick={() => handleSort('Indexer')}
                             >
@@ -76,6 +77,7 @@ export default function SearchResultsTable({
                                 </div>
                             </th>
                             <th
+                                data-testid="sort-title"
                                 className={`px-6 py-4 w-1/2 select-none transition-colors ${variant === 'full' ? 'cursor-pointer hover:text-white' : ''}`}
                                 onClick={() => handleSort('Title')}
                             >
@@ -85,6 +87,7 @@ export default function SearchResultsTable({
                                 </div>
                             </th>
                             <th
+                                data-testid="sort-size"
                                 className={`px-6 py-4 text-right select-none transition-colors ${variant === 'full' ? 'cursor-pointer hover:text-white' : ''}`}
                                 onClick={() => handleSort('Size')}
                             >
@@ -94,6 +97,7 @@ export default function SearchResultsTable({
                                 </div>
                             </th>
                             <th
+                                data-testid="sort-seeders"
                                 className={`px-6 py-4 text-right select-none transition-colors ${variant === 'full' ? 'cursor-pointer hover:text-white' : ''}`}
                                 onClick={() => handleSort('Seeders')}
                             >
@@ -104,6 +108,7 @@ export default function SearchResultsTable({
                             </th>
                             {variant === 'full' && (
                                 <th
+                                    data-testid="sort-date"
                                     className="px-6 py-4 text-right cursor-pointer hover:text-white select-none transition-colors"
                                     onClick={() => handleSort('Date')}
                                 >

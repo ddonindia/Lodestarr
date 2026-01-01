@@ -150,6 +150,47 @@ export default function IndexerSettingsForm({ definitions, settings, links, onSe
                             }`} />
                     </button>
                 </div>
+
+                {/* Cookie/User-Agent (for private trackers) */}
+                <div className="mt-4 pt-4 border-t border-neutral-800">
+                    <h4 className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wider">Authentication</h4>
+
+                    <div className="space-y-3">
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-300 mb-1">
+                                Cookie Header
+                            </label>
+                            <input
+                                type="password"
+                                data-testid="cookie-input"
+                                placeholder="PHPSESSID=abc123; cf_clearance=xyz..."
+                                value={settings['_cookie'] || ''}
+                                onChange={(e) => handleChange('_cookie', e.target.value)}
+                                className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white font-mono text-sm"
+                            />
+                            <p className="text-xs text-neutral-500 mt-1">
+                                For private trackers. Copy from browser DevTools → Network → Request Headers.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-300 mb-1">
+                                User-Agent Override
+                            </label>
+                            <input
+                                type="text"
+                                data-testid="user-agent-input"
+                                placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64)..."
+                                value={settings['_userAgent'] || ''}
+                                onChange={(e) => handleChange('_userAgent', e.target.value)}
+                                className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white font-mono text-sm"
+                            />
+                            <p className="text-xs text-neutral-500 mt-1">
+                                Optional. Use if site requires a specific browser signature.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

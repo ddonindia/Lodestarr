@@ -205,11 +205,8 @@ impl SearchExecutor {
         // Apply keyword filters (used by EZTV and others for URL-friendly transformations)
         if !definition.search.keywordsfilters.is_empty() {
             let mut keywords = ctx.query.keywords.clone();
-            keywords = apply_filters_with_context(
-                &keywords,
-                &definition.search.keywordsfilters,
-                &ctx,
-            );
+            keywords =
+                apply_filters_with_context(&keywords, &definition.search.keywordsfilters, &ctx);
             tracing::debug!(
                 "Keywords after keywordsfilters: '{}' -> '{}'",
                 ctx.query.keywords,
@@ -253,7 +250,7 @@ impl SearchExecutor {
             );
 
             match self
-                .execute_search_path(definition, search_path, &ctx, base_url)
+                .execute_search_path(definition, search_path, &ctx, base_url, user_settings)
                 .await
             {
                 Ok(results) => {
@@ -340,6 +337,7 @@ impl SearchExecutor {
         search_path: &super::definition::SearchPath,
         ctx: &TemplateContext,
         base_url: &str,
+        user_settings: Option<&std::collections::HashMap<String, String>>,
     ) -> Result<Vec<TorrentResult>> {
         // Check if this is a JSON response type
         let is_json = search_path
@@ -380,10 +378,33 @@ impl SearchExecutor {
         };
 
         // Add default headers
+        // Check for user-provided user-agent override
+        let user_agent = user_settings
+            .and_then(|s| s.get("_userAgent"))
+            .filter(|s| !s.is_empty())
+            .map(|s| s.as_str())
+            .unwrap_or("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
+
         request = request
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
-            .header("Accept", if is_json { "application/json" } else { "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" })
+            .header("User-Agent", user_agent)
+            .header(
+                "Accept",
+                if is_json {
+                    "application/json"
+                } else {
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                },
+            )
             .header("Accept-Language", "en-US,en;q=0.5");
+
+        // Add user-provided cookie if present
+        if let Some(cookie) = user_settings
+            .and_then(|s| s.get("_cookie"))
+            .filter(|s| !s.is_empty())
+        {
+            tracing::debug!("Injecting user cookie header");
+            request = request.header("Cookie", cookie.as_str());
+        }
 
         // Add custom headers from definition
         for (key, values) in &definition.search.headers {

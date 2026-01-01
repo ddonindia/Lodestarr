@@ -240,8 +240,8 @@ export default function Search() {
     }).sort((a, b) => {
         if (!sortField) return 0;
 
-        let valA: any = null;
-        let valB: any = null;
+        let valA: string | number | null = null;
+        let valB: string | number | null = null;
 
         switch (sortField) {
             case 'Indexer': valA = a.Indexer || ''; valB = b.Indexer || ''; break;

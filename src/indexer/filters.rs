@@ -678,7 +678,9 @@ fn filter_stripcyrillic(value: &str) -> String {
 /// Add Russian language indicator to title (used by Russian indexers)
 /// Appends " [RUS]" to titles that contain Cyrillic characters
 fn filter_addrussiantotitle(value: &str) -> String {
-    let has_cyrillic = value.chars().any(|c| ('\u{0400}'..='\u{04FF}').contains(&c));
+    let has_cyrillic = value
+        .chars()
+        .any(|c| ('\u{0400}'..='\u{04FF}').contains(&c));
     if has_cyrillic && !value.contains("[RUS]") && !value.contains("[rus]") {
         format!("{} [RUS]", value.trim())
     } else {
@@ -689,7 +691,9 @@ fn filter_addrussiantotitle(value: &str) -> String {
 /// Add Ukrainian language indicator to title
 /// Appends " [UKR]" to titles that contain Cyrillic characters
 fn filter_addukrainiantotitle(value: &str) -> String {
-    let has_cyrillic = value.chars().any(|c| ('\u{0400}'..='\u{04FF}').contains(&c));
+    let has_cyrillic = value
+        .chars()
+        .any(|c| ('\u{0400}'..='\u{04FF}').contains(&c));
     if has_cyrillic && !value.contains("[UKR]") && !value.contains("[ukr]") {
         format!("{} [UKR]", value.trim())
     } else {
@@ -915,10 +919,7 @@ mod tests {
         assert_eq!(filter_stripcyrillic("Привет"), "");
         assert_eq!(filter_stripcyrillic("Test123"), "Test123");
         // Mixed content
-        assert_eq!(
-            filter_stripcyrillic("Movie Название 2025"),
-            "Movie 2025"
-        );
+        assert_eq!(filter_stripcyrillic("Movie Название 2025"), "Movie 2025");
     }
 
     #[test]
@@ -929,10 +930,7 @@ mod tests {
             "Фильм Movie 2025 [RUS]"
         );
         // Should not add if already has [RUS]
-        assert_eq!(
-            filter_addrussiantotitle("Movie [RUS]"),
-            "Movie [RUS]"
-        );
+        assert_eq!(filter_addrussiantotitle("Movie [RUS]"), "Movie [RUS]");
         // Should not add to English-only titles
         assert_eq!(
             filter_addrussiantotitle("English Movie 2025"),
@@ -948,10 +946,7 @@ mod tests {
             "Фільм Movie 2025 [UKR]"
         );
         // Should not add if already has [UKR]
-        assert_eq!(
-            filter_addukrainiantotitle("Movie [UKR]"),
-            "Movie [UKR]"
-        );
+        assert_eq!(filter_addukrainiantotitle("Movie [UKR]"), "Movie [UKR]");
     }
 
     #[test]

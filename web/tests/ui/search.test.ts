@@ -86,6 +86,13 @@ describe('Search Functionality Tests', () => {
     });
 
     test('should have sortable table headers', async () => {
+        // First perform a search to load the results table
+        await page.select('[data-testid="indexer-select"]', 'all');
+        await page.type('[data-testid="search-input"]', 'test');
+        await page.click('[data-testid="search-button"]');
+        await wait(5000); // Wait for results to load
+
+        // Now check for sortable headers
         expect(await page.$('[data-testid="sort-indexer"]')).not.toBeNull();
         expect(await page.$('[data-testid="sort-title"]')).not.toBeNull();
         expect(await page.$('[data-testid="sort-size"]')).not.toBeNull();
