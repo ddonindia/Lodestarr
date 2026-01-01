@@ -106,7 +106,7 @@ fn parse_numeric_field(value: &str) -> Option<u32> {
 /// Parse date field with multiple format support including relative times
 fn parse_date_field(date_str: &str) -> Option<DateTime<Utc>> {
     let trimmed = date_str.trim();
-    
+
     // Try RFC3339
     if let Ok(date) = DateTime::parse_from_rfc3339(trimmed) {
         return Some(date.with_timezone(&Utc));
@@ -130,18 +130,18 @@ fn parse_date_field(date_str: &str) -> Option<DateTime<Utc>> {
 
 /// Parse relative time expressions like "5 hours ago", "2d", "yesterday"
 fn parse_relative_time(value: &str) -> Option<DateTime<Utc>> {
-    use regex::Regex;
     use once_cell::sync::Lazy;
-    
+    use regex::Regex;
+
     static RE_TIMEAGO: Lazy<Regex> = Lazy::new(|| {
         Regex::new(r"(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*(?:ago)?")
             .expect("invalid timeago regex")
     });
-    
+
     let now = Utc::now();
     let lower = value.to_lowercase();
     let lower = lower.trim();
-    
+
     // Handle "yesterday", "today"
     if lower.contains("yesterday") {
         return Some(now - chrono::Duration::days(1));
@@ -149,12 +149,11 @@ fn parse_relative_time(value: &str) -> Option<DateTime<Utc>> {
     if lower.contains("today") || lower.contains("just now") || lower == "now" {
         return Some(now);
     }
-    
+
     // Handle short formats like "5h", "2d", "1w"
-    static RE_SHORT: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"^(\d+)\s*([smhdwy])").expect("invalid short time regex")
-    });
-    
+    static RE_SHORT: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"^(\d+)\s*([smhdwy])").expect("invalid short time regex"));
+
     if let Some(caps) = RE_SHORT.captures(lower) {
         let amount: i64 = caps[1].parse().unwrap_or(0);
         let unit = &caps[2];
@@ -169,7 +168,7 @@ fn parse_relative_time(value: &str) -> Option<DateTime<Utc>> {
         };
         return Some(now - duration);
     }
-    
+
     // Handle "X unit(s) ago" patterns
     if let Some(caps) = RE_TIMEAGO.captures(lower) {
         let amount: i64 = caps[1].parse().unwrap_or(0);
@@ -186,7 +185,7 @@ fn parse_relative_time(value: &str) -> Option<DateTime<Utc>> {
         };
         return Some(now - duration);
     }
-    
+
     None
 }
 

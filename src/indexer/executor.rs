@@ -202,6 +202,24 @@ impl SearchExecutor {
             ctx.query.query = urlencoding::encode(&keywords).to_string();
         }
 
+        // Apply keyword filters (used by EZTV and others for URL-friendly transformations)
+        if !definition.search.keywordsfilters.is_empty() {
+            let mut keywords = ctx.query.keywords.clone();
+            keywords = apply_filters_with_context(
+                &keywords,
+                &definition.search.keywordsfilters,
+                &ctx,
+            );
+            tracing::debug!(
+                "Keywords after keywordsfilters: '{}' -> '{}'",
+                ctx.query.keywords,
+                keywords
+            );
+            ctx.query.keywords = keywords.clone();
+            // Re-encode query
+            ctx.query.query = urlencoding::encode(&keywords).to_string();
+        }
+
         // Map Torznab categories to Tracker categories
         if !query.categories.is_empty() {
             let resolved_categories: Vec<String> = query
