@@ -140,7 +140,25 @@ pub fn apply_filter(value: &str, filter: &Filter) -> String {
             filter_math(value, &filter.args, |a, b| if b != 0.0 { a / b } else { a })
         }
 
+        // Cyrillic/Russian/Ukrainian filters (used by 50+ indexers)
+        "stripcyrillic" => filter_stripcyrillic(value),
+        "addrussiantotitle" | "addrussian" => filter_addrussiantotitle(value),
+        "addukrainiantotitle" => filter_addukrainiantotitle(value),
+
+        // Language filters
+        "multilang" | "multilanguage" => value.to_string(), // Passthrough - handled at result level
+        "vostfr" => value.to_string(),                      // French subs indicator - passthrough
+
         _ => {
+            // Check for filter names with comments (e.g., "re_replace#S01toсезон1")
+            if filter.name.contains('#') {
+                let base_name = filter.name.split('#').next().unwrap_or(&filter.name);
+                let base_filter = Filter {
+                    name: base_name.to_string(),
+                    args: filter.args.clone(),
+                };
+                return apply_filter(value, &base_filter);
+            }
             tracing::warn!("Unknown filter: {}", filter.name);
             value.to_string()
         }
@@ -643,6 +661,39 @@ fn filter_validate(value: &str, args: &FilterArgs) -> String {
             }
         }
         Err(_) => value.to_string(),
+    }
+}
+
+/// Strip Cyrillic characters from text (used by Russian indexers to clean titles)
+fn filter_stripcyrillic(value: &str) -> String {
+    value
+        .chars()
+        .filter(|c| !('\u{0400}'..='\u{04FF}').contains(c)) // Cyrillic block
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Add Russian language indicator to title (used by Russian indexers)
+/// Appends " [RUS]" to titles that contain Cyrillic characters
+fn filter_addrussiantotitle(value: &str) -> String {
+    let has_cyrillic = value.chars().any(|c| ('\u{0400}'..='\u{04FF}').contains(&c));
+    if has_cyrillic && !value.contains("[RUS]") && !value.contains("[rus]") {
+        format!("{} [RUS]", value.trim())
+    } else {
+        value.to_string()
+    }
+}
+
+/// Add Ukrainian language indicator to title
+/// Appends " [UKR]" to titles that contain Cyrillic characters
+fn filter_addukrainiantotitle(value: &str) -> String {
+    let has_cyrillic = value.chars().any(|c| ('\u{0400}'..='\u{04FF}').contains(&c));
+    if has_cyrillic && !value.contains("[UKR]") && !value.contains("[ukr]") {
+        format!("{} [UKR]", value.trim())
+    } else {
+        value.to_string()
     }
 }
 
