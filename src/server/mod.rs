@@ -15,7 +15,10 @@ mod static_files;
 
 use crate::config::Config;
 use crate::indexer::{IndexerDownloader, IndexerManager};
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    routing::{delete, get},
+};
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::sync::RwLock;
@@ -24,7 +27,10 @@ use tower_http::trace::TraceLayer;
 // Handlers are used directly via module paths (e.g., api_info::api_info)
 use api_clients::*;
 use api_indexers::*;
-use api_info::{api_info, get_history, get_history_results, get_stats};
+use api_info::{
+    api_info, clear_all, clear_downloads, clear_stats, get_downloaded_links, get_downloads,
+    get_history, get_history_results, get_stats,
+};
 use api_native::*;
 use api_settings::*;
 use static_files::static_handler;
@@ -120,9 +126,12 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
     let app = Router::new()
         // API Endpoints
         .route("/api/info", get(api_info))
-        .route("/api/stats", get(get_stats))
+        .route("/api/clear-all", delete(clear_all))
+        .route("/api/stats", get(get_stats).delete(clear_stats))
         .route("/api/history", get(get_history))
         .route("/api/history/{key}", get(get_history_results))
+        .route("/api/downloads", get(get_downloads).delete(clear_downloads))
+        .route("/api/downloads/links", get(get_downloaded_links))
         .route("/api/v2.0/indexers", get(list_indexers))
         .route("/api/v2.0/search", get(search_api))
         .route(

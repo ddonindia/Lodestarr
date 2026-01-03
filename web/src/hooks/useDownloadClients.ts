@@ -12,6 +12,8 @@ interface UseDownloadClientsReturn {
     downloadConfigured: boolean;
     downloading: string | null;
     handleServerDownload: (link: string, title: string) => Promise<void>;
+    downloadedLinks: Set<string>;
+    refreshDownloadedLinks: () => Promise<void>;
 }
 
 /**
@@ -22,6 +24,20 @@ export function useDownloadClients(): UseDownloadClientsReturn {
     const [clients, setClients] = useState<DownloadClient[]>([]);
     const [downloadConfigured, setDownloadConfigured] = useState(false);
     const [downloading, setDownloading] = useState<string | null>(null);
+    const [downloadedLinks, setDownloadedLinks] = useState<Set<string>>(new Set());
+
+    // Fetch downloaded links
+    const refreshDownloadedLinks = useCallback(async () => {
+        try {
+            const res = await fetch('/api/downloads/links');
+            if (res.ok) {
+                const links: string[] = await res.json();
+                setDownloadedLinks(new Set(links));
+            }
+        } catch (err) {
+            console.error('Failed to load downloaded links', err);
+        }
+    }, []);
 
     // Fetch clients and download config on mount
     useEffect(() => {
@@ -36,7 +52,10 @@ export function useDownloadClients(): UseDownloadClientsReturn {
             .then(res => res.json())
             .then(data => setClients(data))
             .catch(err => console.error('Failed to load clients', err));
-    }, []);
+
+        // Load downloaded links
+        refreshDownloadedLinks();
+    }, [refreshDownloadedLinks]);
 
     // Send torrent to a download client
     const handleSendToClient = useCallback(async (clientId: string, magnet: string, title: string) => {
@@ -46,18 +65,20 @@ export function useDownloadClients(): UseDownloadClientsReturn {
             const res = await fetch(`/api/clients/${clientId}/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ magnet })
+                body: JSON.stringify({ magnet, title })
             });
 
             if (res.ok) {
                 toast.success('Sent to client', { id: toastId });
+                // Refresh downloaded links after successful send
+                refreshDownloadedLinks();
             } else {
                 throw new Error('Failed to send');
             }
         } catch {
             toast.error('Failed to send torrent', { id: toastId });
         }
-    }, []);
+    }, [refreshDownloadedLinks]);
 
     // Download torrent to server
     const handleServerDownload = useCallback(async (link: string, title: string) => {
@@ -78,6 +99,8 @@ export function useDownloadClients(): UseDownloadClientsReturn {
                 toast.error('Download failed');
             } else {
                 toast.success('Download started');
+                // Refresh downloaded links after successful download
+                refreshDownloadedLinks();
             }
         } catch (err) {
             console.error('Download error', err);
@@ -85,13 +108,15 @@ export function useDownloadClients(): UseDownloadClientsReturn {
         } finally {
             setDownloading(null);
         }
-    }, []);
+    }, [refreshDownloadedLinks]);
 
     return {
         clients,
         handleSendToClient,
         downloadConfigured,
         downloading,
-        handleServerDownload
+        handleServerDownload,
+        downloadedLinks,
+        refreshDownloadedLinks
     };
 }

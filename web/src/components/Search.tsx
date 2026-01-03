@@ -46,7 +46,7 @@ export default function Search() {
     const [currentPage, setCurrentPage] = useState(1);
 
     // Use the shared hooks
-    const { clients, handleSendToClient, downloadConfigured, downloading, handleServerDownload } = useDownloadClients();
+    const { clients, handleSendToClient, downloadConfigured, downloading, handleServerDownload, downloadedLinks } = useDownloadClients();
     const { copiedField, copyToClipboard } = useCopyToClipboard();
     const { torrentMeta, loadingMeta, fetchTorrentMeta, clearMeta } = useTorrentMeta();
 
@@ -412,6 +412,7 @@ export default function Search() {
                     downloadingId={downloading}
                     clients={clients}
                     onSendToClient={handleSendToClient}
+                    downloadedLinks={downloadedLinks}
                 />
             </div>
 

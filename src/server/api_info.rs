@@ -143,3 +143,70 @@ pub(super) async fn get_history_results(
             .into_response(),
     }
 }
+
+/// Get download history
+pub(super) async fn get_downloads(
+    State(state): State<AppState>,
+) -> Json<Vec<crate::db::DownloadLog>> {
+    let downloads = crate::db::get_download_logs(&state.db_pool, 500).unwrap_or_default();
+    Json(downloads)
+}
+
+/// Get list of downloaded magnet/links for marking items in UI
+pub(super) async fn get_downloaded_links(State(state): State<AppState>) -> Json<Vec<String>> {
+    let links = crate::db::get_downloaded_links(&state.db_pool).unwrap_or_default();
+    Json(links)
+}
+
+/// Clear download history
+pub(super) async fn clear_downloads(State(state): State<AppState>) -> impl IntoResponse {
+    match crate::db::clear_download_logs(&state.db_pool) {
+        Ok(count) => (
+            axum::http::StatusCode::OK,
+            format!("Cleared {} download logs", count),
+        )
+            .into_response(),
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to clear: {}", e),
+        )
+            .into_response(),
+    }
+}
+
+/// Clear search stats/logs
+pub(super) async fn clear_stats(State(state): State<AppState>) -> impl IntoResponse {
+    match crate::db::clear_search_logs(&state.db_pool) {
+        Ok(count) => (
+            axum::http::StatusCode::OK,
+            format!("Cleared {} search logs", count),
+        )
+            .into_response(),
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to clear: {}", e),
+        )
+            .into_response(),
+    }
+}
+
+/// Clear all data (stats + downloads + cache)
+pub(super) async fn clear_all(State(state): State<AppState>) -> impl IntoResponse {
+    let mut cleared = Vec::new();
+
+    if let Ok(n) = crate::db::clear_search_logs(&state.db_pool) {
+        cleared.push(format!("{} search logs", n));
+    }
+    if let Ok(n) = crate::db::clear_download_logs(&state.db_pool) {
+        cleared.push(format!("{} downloads", n));
+    }
+    if let Ok(n) = crate::db::clear_cache(&state.db_pool) {
+        cleared.push(format!("{} cached searches", n));
+    }
+
+    (
+        axum::http::StatusCode::OK,
+        format!("Cleared: {}", cleared.join(", ")),
+    )
+        .into_response()
+}

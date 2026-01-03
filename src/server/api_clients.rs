@@ -93,6 +93,7 @@ pub async fn remove_client(
 #[derive(Deserialize)]
 pub struct SendToClientRequest {
     pub magnet: String,
+    pub title: Option<String>,
 }
 
 /// Send magnet link to a specific client
@@ -118,8 +119,22 @@ pub async fn send_to_client(
         )
     })?;
 
+    // Log the download to the database
+    let client_name = client_config.name.clone();
+    drop(config); // Release the read lock before DB operation
+    if let Err(e) = crate::db::log_download(
+        &state.db_pool,
+        req.title.as_deref(),
+        Some(&req.magnet),
+        None,
+        Some(&client_name),
+        "client",
+    ) {
+        tracing::warn!("Failed to log download: {}", e);
+    }
+
     Ok(Json(serde_json::json!({
         "success": true,
-        "message": format!("Sent to {}", client_config.name)
+        "message": format!("Sent to {}", client_name)
     })))
 }

@@ -28,7 +28,7 @@ export default function RecentActivity() {
     const [inspectedResult, setInspectedResult] = useState<TorrentResult | null>(null);
 
     // Use the shared hooks
-    const { clients, handleSendToClient, downloadConfigured, downloading, handleServerDownload } = useDownloadClients();
+    const { clients, handleSendToClient, downloadConfigured, downloading, handleServerDownload, downloadedLinks } = useDownloadClients();
     const { copiedField, copyToClipboard } = useCopyToClipboard();
     const { torrentMeta, loadingMeta, fetchTorrentMeta } = useTorrentMeta();
 
@@ -216,6 +216,7 @@ export default function RecentActivity() {
                                     variant="simple"
                                     clients={clients}
                                     onSendToClient={handleSendToClient}
+                                    downloadedLinks={downloadedLinks}
                                 />
                             )}
                         </div>

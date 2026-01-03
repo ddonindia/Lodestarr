@@ -28,6 +28,7 @@ interface SearchResultsTableProps {
     variant?: 'full' | 'simple'; // 'full' allows sorting columns, 'simple' is for basic display
     clients?: { id: string; name: string }[];
     onSendToClient?: (clientId: string, magnet: string, title: string) => void;
+    downloadedLinks?: Set<string>;
 }
 
 export default function SearchResultsTable({
@@ -43,7 +44,8 @@ export default function SearchResultsTable({
     downloadingId = null,
     variant = 'full',
     clients = [],
-    onSendToClient
+    onSendToClient,
+    downloadedLinks = new Set()
 }: SearchResultsTableProps) {
 
     const SortIcon = ({ field }: { field: SortField }) => {
@@ -173,86 +175,95 @@ export default function SearchResultsTable({
                                         </td>
                                     )}
                                     <td className="px-6 py-4 text-center">
-                                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {/* Direct Download Link */}
-                                            {link && (
-                                                <a
-                                                    href={indexerId ? `/api/v2.0/indexers/${encodeURIComponent(indexerId)}/dl?link=${encodeURIComponent(link)}` : link}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-2 rounded-md hover:bg-neutral-700 transition-colors"
-                                                    title="Download .torrent"
-                                                    style={buttonSecondaryStyle}
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                                    </svg>
-                                                </a>
+                                        <div className="flex items-center justify-center gap-2">
+                                            {/* Downloaded indicator - always visible */}
+                                            {(downloadedLinks.has(magnet || '') || downloadedLinks.has(link || '')) && (
+                                                <span className="px-2 py-0.5 text-[10px] font-medium rounded bg-emerald-500/20 text-emerald-400 uppercase tracking-wider">
+                                                    ✓
+                                                </span>
                                             )}
-
-                                            {/* Download to Server */}
-                                            {downloadConfigured && link && (
-                                                <button
-                                                    onClick={() => onDownload(link, title)}
-                                                    disabled={downloadingId === link}
-                                                    className="p-2 rounded-md hover:bg-neutral-700 transition-colors disabled:opacity-50"
-                                                    title="Save to Server"
-                                                    style={buttonSecondaryStyle}
-                                                >
-                                                    {downloadingId === link ? (
-                                                        <span className="animate-spin text-xs">⌛</span>
-                                                    ) : (
+                                            {/* Action buttons - visible on hover */}
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {/* Direct Download Link */}
+                                                {link && (
+                                                    <a
+                                                        href={indexerId ? `/api/v2.0/indexers/${encodeURIComponent(indexerId)}/dl?link=${encodeURIComponent(link)}` : link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2 rounded-md hover:bg-neutral-700 transition-colors"
+                                                        title="Download .torrent"
+                                                        style={buttonSecondaryStyle}
+                                                    >
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3v5.25a3 3 0 0 1-3 3m-13.5 0v5.25a3 3 0 0 0 3 3h7.5a3 3 0 0 0 3-3v-5.25" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                                         </svg>
-                                                    )}
-                                                </button>
-                                            )}
+                                                    </a>
+                                                )}
 
-                                            {/* Send to Client */}
-                                            {clients.length > 0 && onSendToClient && (
-                                                <div className="relative group/client">
-                                                    {clients.length === 1 ? (
-                                                        <button
-                                                            onClick={() => onSendToClient(clients[0].id, magnet || link || '', title)}
-                                                            className="p-2 rounded-md hover:bg-neutral-700 transition-colors"
-                                                            title={`Send to ${clients[0].name}`}
-                                                            style={buttonSecondaryStyle}
-                                                        >
+                                                {/* Download to Server */}
+                                                {downloadConfigured && link && (
+                                                    <button
+                                                        onClick={() => onDownload(link, title)}
+                                                        disabled={downloadingId === link}
+                                                        className="p-2 rounded-md hover:bg-neutral-700 transition-colors disabled:opacity-50"
+                                                        title="Save to Server"
+                                                        style={buttonSecondaryStyle}
+                                                    >
+                                                        {downloadingId === link ? (
+                                                            <span className="animate-spin text-xs">⌛</span>
+                                                        ) : (
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3v5.25a3 3 0 0 1-3 3m-13.5 0v5.25a3 3 0 0 0 3 3h7.5a3 3 0 0 0 3-3v-5.25" />
                                                             </svg>
-                                                        </button>
-                                                    ) : (
-                                                        <div className="relative">
+                                                        )}
+                                                    </button>
+                                                )}
+
+                                                {/* Send to Client */}
+                                                {clients.length > 0 && onSendToClient && (
+                                                    <div className="relative group/client">
+                                                        {clients.length === 1 ? (
                                                             <button
+                                                                onClick={() => onSendToClient(clients[0].id, magnet || link || '', title)}
                                                                 className="p-2 rounded-md hover:bg-neutral-700 transition-colors"
-                                                                title="Send to..."
+                                                                title={`Send to ${clients[0].name}`}
                                                                 style={buttonSecondaryStyle}
                                                             >
                                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5" />
                                                                 </svg>
                                                             </button>
-                                                            <select
-                                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                                                onChange={(e) => {
-                                                                    if (e.target.value) {
-                                                                        onSendToClient(e.target.value, magnet || link || '', title);
-                                                                        e.target.value = '';
-                                                                    }
-                                                                }}
-                                                                value=""
-                                                            >
-                                                                <option value="" disabled>Send to...</option>
-                                                                {clients.map(c => (
-                                                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                        ) : (
+                                                            <div className="relative">
+                                                                <button
+                                                                    className="p-2 rounded-md hover:bg-neutral-700 transition-colors"
+                                                                    title="Send to..."
+                                                                    style={buttonSecondaryStyle}
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5" />
+                                                                    </svg>
+                                                                </button>
+                                                                <select
+                                                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                                                    onChange={(e) => {
+                                                                        if (e.target.value) {
+                                                                            onSendToClient(e.target.value, magnet || link || '', title);
+                                                                            e.target.value = '';
+                                                                        }
+                                                                    }}
+                                                                    value=""
+                                                                >
+                                                                    <option value="" disabled>Send to...</option>
+                                                                    {clients.map(c => (
+                                                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>

@@ -35,6 +35,20 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
     )
     .expect("Failed to create search_cache table");
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS download_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            magnet TEXT,
+            download_link TEXT,
+            client_name TEXT,
+            download_type TEXT NOT NULL,
+            timestamp DATETIME NOT NULL
+        )",
+        [],
+    )
+    .expect("Failed to create download_logs table");
+
     // Indexes
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_search_logs_timestamp ON search_logs(timestamp)",
@@ -43,6 +57,11 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
     .ok();
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_search_cache_expires ON search_cache(expires_at)",
+        [],
+    )
+    .ok();
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_download_logs_timestamp ON download_logs(timestamp)",
         [],
     )
     .ok();
@@ -156,6 +175,13 @@ pub fn clear_search_logs(pool: &DbPool) -> anyhow::Result<usize> {
     Ok(deleted)
 }
 
+/// Clear all cached searches
+pub fn clear_cache(pool: &DbPool) -> anyhow::Result<usize> {
+    let conn = pool.get()?;
+    let deleted = conn.execute("DELETE FROM search_cache", [])?;
+    Ok(deleted)
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SearchLog {
     pub query: String,
@@ -230,4 +256,85 @@ pub fn get_cached_results_by_key(pool: &DbPool, key: &str) -> anyhow::Result<Opt
         .optional()?;
 
     Ok(res)
+}
+
+/// Record of a download sent to a client or saved to server
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DownloadLog {
+    pub id: i64,
+    pub title: Option<String>,
+    pub magnet: Option<String>,
+    pub download_link: Option<String>,
+    pub client_name: Option<String>,
+    pub download_type: String,
+    pub timestamp: DateTime<Utc>,
+}
+
+/// Log a download to the database
+pub fn log_download(
+    pool: &DbPool,
+    title: Option<&str>,
+    magnet: Option<&str>,
+    download_link: Option<&str>,
+    client_name: Option<&str>,
+    download_type: &str,
+) -> anyhow::Result<()> {
+    let conn = pool.get()?;
+    conn.execute(
+        "INSERT INTO download_logs (title, magnet, download_link, client_name, download_type, timestamp)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+            title,
+            magnet,
+            download_link,
+            client_name,
+            download_type,
+            Utc::now()
+        ],
+    )?;
+    Ok(())
+}
+
+/// Get recent download logs
+pub fn get_download_logs(pool: &DbPool, limit: usize) -> anyhow::Result<Vec<DownloadLog>> {
+    let conn = pool.get()?;
+    let mut stmt = conn.prepare(
+        "SELECT id, title, magnet, download_link, client_name, download_type, timestamp 
+         FROM download_logs ORDER BY timestamp DESC LIMIT ?",
+    )?;
+    let logs = stmt
+        .query_map([limit], |row| {
+            Ok(DownloadLog {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                magnet: row.get(2)?,
+                download_link: row.get(3)?,
+                client_name: row.get(4)?,
+                download_type: row.get(5)?,
+                timestamp: row.get(6)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(logs)
+}
+
+/// Get all downloaded magnet/links for checking if an item was downloaded
+pub fn get_downloaded_links(pool: &DbPool) -> anyhow::Result<Vec<String>> {
+    let conn = pool.get()?;
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT magnet FROM download_logs WHERE magnet IS NOT NULL
+         UNION
+         SELECT DISTINCT download_link FROM download_logs WHERE download_link IS NOT NULL",
+    )?;
+    let links = stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<Vec<String>, _>>()?;
+    Ok(links)
+}
+
+/// Clear all download logs
+pub fn clear_download_logs(pool: &DbPool) -> anyhow::Result<usize> {
+    let conn = pool.get()?;
+    let deleted = conn.execute("DELETE FROM download_logs", [])?;
+    Ok(deleted)
 }

@@ -211,6 +211,9 @@ pub(super) async fn trigger_download(
         }
     };
 
+    let url = payload.url.clone();
+    let title = payload.title.clone();
+
     match crate::download::perform_download(
         &client,
         &payload.url,
@@ -220,7 +223,20 @@ pub(super) async fn trigger_download(
     )
     .await
     {
-        Ok(_) => (StatusCode::OK, "Download started").into_response(),
+        Ok(_) => {
+            // Log the download to the database
+            if let Err(e) = crate::db::log_download(
+                &state.db_pool,
+                title.as_deref(),
+                None,
+                Some(&url),
+                None,
+                "server",
+            ) {
+                tracing::warn!("Failed to log download: {}", e);
+            }
+            (StatusCode::OK, "Download started").into_response()
+        }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Download failed: {}", e),
