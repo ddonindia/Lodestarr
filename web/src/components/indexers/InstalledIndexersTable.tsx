@@ -34,7 +34,7 @@ export default function InstalledIndexersTable({
 
     // Action buttons component (reused in both layouts)
     const ActionButtons = ({ indexer }: { indexer: UnifiedIndexer }) => (
-        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+        <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
             {indexer.isNative && (
                 <Button
                     variant="ghost"

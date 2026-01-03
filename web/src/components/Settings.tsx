@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Globe, Palette, Sliders, Server } from 'lucide-react';
+import { Globe, Palette, Sliders, Server, Database } from 'lucide-react';
 import AppearanceSettings from './AppearanceSettings';
 import DownloadSettings from './settings/DownloadSettings';
 import ProxySettings from './settings/ProxySettings';
 import ClientsSettings from './settings/ClientsSettings';
+import DataSettings from './settings/DataSettings';
 
-type TabId = 'general' | 'proxy' | 'appearance' | 'clients';
+type TabId = 'general' | 'proxy' | 'appearance' | 'clients' | 'data';
 
 interface SettingTab {
     id: TabId;
@@ -41,6 +42,12 @@ export default function Settings() {
             label: 'Download Clients',
             icon: <Server size={18} />,
             component: <ClientsSettings />
+        },
+        {
+            id: 'data',
+            label: 'Data',
+            icon: <Database size={18} />,
+            component: <DataSettings />
         }
     ];
 
