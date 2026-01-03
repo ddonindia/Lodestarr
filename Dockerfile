@@ -6,9 +6,13 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-# Stage 2: Build Backend
-FROM rust:1-bookworm AS backend
+# Stage 2: Build Backend (using Alpine with musl for static-ish binary)
+FROM rust:1-alpine AS backend
 WORKDIR /app
+
+# Install build dependencies for Alpine
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
+
 # Copy manifests
 COPY Cargo.toml Cargo.lock ./
 # Create dummy main to cache deps
@@ -25,15 +29,11 @@ COPY --from=frontend /app/web/dist ./web/dist
 RUN touch src/main.rs
 RUN cargo build --release
 
-# Stage 3: Runtime
-FROM debian:bookworm-slim
-WORKDIR /app
+# Stage 3: Runtime (Alpine ~5MB base)
+FROM alpine:latest
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl3 \
-    && rm -rf /var/lib/apt/lists/*
+# Only need CA certificates for HTTPS
+RUN apk add --no-cache ca-certificates
 
 COPY --from=backend /app/target/release/lodestarr /usr/local/bin/lodestarr
 
