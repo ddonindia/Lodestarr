@@ -59,7 +59,7 @@ export default function IndexerSettingsForm({ definitions, settings, links, onSe
                             onChange={(e) => handleChange(def.name, e.target.value)}
                             className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white"
                         />
-                    ) : def.type === 'select' && def.options ? (
+                    ) : def.type === 'select' && Array.isArray(def.options) ? (
                         <select
                             value={settings[def.name] || ''}
                             onChange={(e) => handleChange(def.name, e.target.value)}
