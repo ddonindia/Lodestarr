@@ -140,6 +140,11 @@ pub static CATEGORIES: &[Category] = &[
         name: "Movies/WEBDL",
         description: "WEB-DL movies",
     },
+    Category {
+        id: 2090,
+        name: "Movies/x265",
+        description: "x265/HEVC movies",
+    },
     // Audio
     Category {
         id: 3000,
@@ -268,6 +273,11 @@ pub static CATEGORIES: &[Category] = &[
         name: "TV/Documentary",
         description: "Documentaries",
     },
+    Category {
+        id: 5090,
+        name: "TV/x265",
+        description: "x265/HEVC TV",
+    },
     // XXX
     Category {
         id: 6000,
@@ -295,6 +305,11 @@ pub static CATEGORIES: &[Category] = &[
         description: "Adult x264",
     },
     Category {
+        id: 6045,
+        name: "XXX/UHD",
+        description: "Adult 4K/UHD",
+    },
+    Category {
         id: 6050,
         name: "XXX/Other",
         description: "Adult other",
@@ -308,6 +323,16 @@ pub static CATEGORIES: &[Category] = &[
         id: 6070,
         name: "XXX/Packs",
         description: "Adult packs",
+    },
+    Category {
+        id: 6080,
+        name: "XXX/SD",
+        description: "Adult SD",
+    },
+    Category {
+        id: 6090,
+        name: "XXX/WEB-DL",
+        description: "Adult WEB-DL",
     },
     // Books
     Category {
