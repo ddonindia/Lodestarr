@@ -5,7 +5,7 @@ import type { NativeSearchResult } from '../types/api';
 import SearchResultsTable from './SearchResultsTable';
 import SearchResultsList from './SearchResultsList';
 import ResultDetailsModal from './ResultDetailsModal';
-import { SearchFiltersBar, SearchPagination } from './search';
+import { SearchFiltersBar, SearchPagination } from './search/index';
 import { useDownloadClients } from '../hooks/useDownloadClients';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { useTorrentMeta } from '../hooks/useTorrentMeta';
