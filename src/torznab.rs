@@ -561,17 +561,43 @@ pub fn generate_caps_xml(
 
     xml.push_str("  </searching>\n");
 
-    // Categories
+    // Categories - hierarchical structure (Jackett/Prowlarr parity)
     xml.push_str("  <categories>\n");
-    for &cat_id in categories {
-        if let Some(cat) = CATEGORIES.iter().find(|c| c.id == cat_id) {
+    
+    // Group categories by their parent (id / 1000 * 1000)
+    let mut parent_ids: Vec<i32> = categories
+        .iter()
+        .filter(|&&id| id % 1000 == 0)
+        .copied()
+        .collect();
+    parent_ids.sort();
+    
+    for parent_id in &parent_ids {
+        if let Some(parent_cat) = CATEGORIES.iter().find(|c| c.id == *parent_id) {
+            // Start parent category
             xml.push_str(&format!(
-                "    <category id=\"{}\" name=\"{}\" />\n",
-                cat.id, cat.name
+                "    <category id=\"{}\" name=\"{}\">\n",
+                parent_cat.id, parent_cat.name
             ));
+            
+            // Add subcategories
+            for &sub_id in categories {
+                if sub_id / 1000 == parent_id / 1000 && sub_id != *parent_id {
+                    if let Some(sub_cat) = CATEGORIES.iter().find(|c| c.id == sub_id) {
+                        xml.push_str(&format!(
+                            "      <subcat id=\"{}\" name=\"{}\" />\n",
+                            sub_cat.id, sub_cat.name
+                        ));
+                    }
+                }
+            }
+            
+            xml.push_str("    </category>\n");
         }
     }
+    
     xml.push_str("  </categories>\n");
+
 
     xml.push_str("</caps>\n");
     xml
