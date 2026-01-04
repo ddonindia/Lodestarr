@@ -134,6 +134,7 @@ pub(super) async fn search_api(
         tvdbid: None,
         year: None,
         limit: Some(100),
+        ..Default::default()
     };
 
     let futures = clients.into_iter().map(|(name, client)| {
@@ -524,6 +525,7 @@ async fn torznab_all_indexers(
                 tvdbid: params.tvdbid,
                 year: params.year,
                 limit: params.limit,
+                ..Default::default()
             };
 
             let proxy_base = proxy_base_url.to_string();

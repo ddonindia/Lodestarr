@@ -43,6 +43,21 @@ pub struct SearchParams {
     pub tvdbid: Option<i32>,
     pub year: Option<u32>,
     pub limit: Option<u32>,
+    // Extended external IDs (Jackett/Prowlarr parity)
+    pub rid: Option<i32>,       // TVRage ID
+    pub tvmazeid: Option<i32>,  // TVMaze ID
+    pub traktid: Option<i32>,   // Trakt ID
+    pub doubanid: Option<i32>,  // Douban ID
+    pub genre: Option<String>,  // Genre filter
+    // Music search params
+    pub album: Option<String>,
+    pub artist: Option<String>,
+    pub label: Option<String>,
+    pub track: Option<String>,
+    // Book search params
+    pub title: Option<String>,
+    pub author: Option<String>,
+    pub publisher: Option<String>,
 }
 
 // Local TorrentResult struct removed. Using crate::models::TorrentResult.
@@ -208,6 +223,45 @@ impl TorznabClient {
         }
         if let Some(limit) = params.limit {
             query_params.push(("limit", limit.to_string()));
+        }
+        // Extended external IDs
+        if let Some(rid) = params.rid {
+            query_params.push(("rid", rid.to_string()));
+        }
+        if let Some(tvmazeid) = params.tvmazeid {
+            query_params.push(("tvmazeid", tvmazeid.to_string()));
+        }
+        if let Some(traktid) = params.traktid {
+            query_params.push(("traktid", traktid.to_string()));
+        }
+        if let Some(doubanid) = params.doubanid {
+            query_params.push(("doubanid", doubanid.to_string()));
+        }
+        if let Some(ref genre) = params.genre {
+            query_params.push(("genre", genre.clone()));
+        }
+        // Music search params
+        if let Some(ref album) = params.album {
+            query_params.push(("album", album.clone()));
+        }
+        if let Some(ref artist) = params.artist {
+            query_params.push(("artist", artist.clone()));
+        }
+        if let Some(ref label) = params.label {
+            query_params.push(("label", label.clone()));
+        }
+        if let Some(ref track) = params.track {
+            query_params.push(("track", track.clone()));
+        }
+        // Book search params
+        if let Some(ref title) = params.title {
+            query_params.push(("title", title.clone()));
+        }
+        if let Some(ref author) = params.author {
+            query_params.push(("author", author.clone()));
+        }
+        if let Some(ref publisher) = params.publisher {
+            query_params.push(("publisher", publisher.clone()));
         }
 
         let params_ref: Vec<(&str, &str)> =
@@ -417,6 +471,24 @@ pub fn generate_caps_xml(
         if capabilities.tmdb_id {
             params.push("tmdbid");
         }
+        if capabilities.rid {
+            params.push("rid");
+        }
+        if capabilities.tvmaze_id {
+            params.push("tvmazeid");
+        }
+        if capabilities.trakt_id {
+            params.push("traktid");
+        }
+        if capabilities.douban_id {
+            params.push("doubanid");
+        }
+        if capabilities.year {
+            params.push("year");
+        }
+        if capabilities.genre {
+            params.push("genre");
+        }
         xml.push_str(&format!(
             "    <tv-search available=\"yes\" supportedParams=\"{}\" />\n",
             params.join(",")
@@ -431,6 +503,18 @@ pub fn generate_caps_xml(
         if capabilities.tmdb_id {
             params.push("tmdbid");
         }
+        if capabilities.trakt_id {
+            params.push("traktid");
+        }
+        if capabilities.douban_id {
+            params.push("doubanid");
+        }
+        if capabilities.year {
+            params.push("year");
+        }
+        if capabilities.genre {
+            params.push("genre");
+        }
         xml.push_str(&format!(
             "    <movie-search available=\"yes\" supportedParams=\"{}\" />\n",
             params.join(",")
@@ -438,12 +522,42 @@ pub fn generate_caps_xml(
     }
 
     if capabilities.music_search {
-        xml.push_str("    <music-search available=\"yes\" supportedParams=\"q,album,artist\" />\n");
+        let mut params = vec!["q", "album", "artist"];
+        if capabilities.music_label {
+            params.push("label");
+        }
+        if capabilities.music_track {
+            params.push("track");
+        }
+        if capabilities.year {
+            params.push("year");
+        }
+        if capabilities.genre {
+            params.push("genre");
+        }
+        xml.push_str(&format!(
+            "    <music-search available=\"yes\" supportedParams=\"{}\" />\n",
+            params.join(",")
+        ));
     }
 
     if capabilities.book_search {
-        xml.push_str("    <book-search available=\"yes\" supportedParams=\"q,title,author\" />\n");
+        let mut params = vec!["q", "title", "author"];
+        if capabilities.book_publisher {
+            params.push("publisher");
+        }
+        if capabilities.year {
+            params.push("year");
+        }
+        if capabilities.genre {
+            params.push("genre");
+        }
+        xml.push_str(&format!(
+            "    <book-search available=\"yes\" supportedParams=\"{}\" />\n",
+            params.join(",")
+        ));
     }
+
 
     xml.push_str("  </searching>\n");
 

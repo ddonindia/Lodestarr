@@ -88,7 +88,27 @@ pub struct SearchCapabilities {
     pub tmdb_id: bool,
     /// Supports season/episode search
     pub season_episode: bool,
+
+    // Extended capabilities (Jackett/Prowlarr parity)
+    /// Supports TVRage ID search
+    pub rid: bool,
+    /// Supports TVMaze ID search
+    pub tvmaze_id: bool,
+    /// Supports Trakt ID search
+    pub trakt_id: bool,
+    /// Supports Douban ID search
+    pub douban_id: bool,
+    /// Supports genre search
+    pub genre: bool,
+    /// Supports year search
+    pub year: bool,
+    /// Supports music label/track search
+    pub music_label: bool,
+    pub music_track: bool,
+    /// Supports book publisher search
+    pub book_publisher: bool,
 }
+
 
 impl SearchCapabilities {
     /// Default capabilities for a basic public indexer

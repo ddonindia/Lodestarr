@@ -794,6 +794,7 @@ async fn handle_search_command(
         tvdbid,
         year,
         limit: Some(limit),
+        ..Default::default()
     };
 
     let all_results = perform_search(&clients, params).await;
