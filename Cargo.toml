@@ -6,8 +6,8 @@ description = "Feature-rich Torznab CLI client for Jackett, Prowlarr, and compat
 license = "MIT"
 
 [dependencies]
-# HTTP client
-reqwest = { version = "0.12.25", features = ["json", "cookies"] }
+# HTTP client (using rustls for cross-compilation compatibility)
+reqwest = { version = "0.12.25", default-features = false, features = ["json", "cookies", "rustls-tls"] }
 
 # Async runtime
 tokio = { version = "1.48.0", features = ["full"] }

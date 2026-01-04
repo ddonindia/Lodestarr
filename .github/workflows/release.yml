@@ -11,28 +11,26 @@ env:
 jobs:
   build:
     name: Build ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
             artifact: lodestarr-linux-x86_64
-            cross: false
           - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
             artifact: lodestarr-linux-arm64
-            cross: true
-          - target: x86_64-pc-windows-gnu
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
             artifact: lodestarr-windows-x86_64.exe
-            cross: true
           - target: x86_64-apple-darwin
+            os: macos-15-intel
             artifact: lodestarr-macos-x86_64
-            cross: true
-            use_osxcross: true
           - target: aarch64-apple-darwin
+            os: macos-latest
             artifact: lodestarr-macos-arm64
-            cross: true
-            use_osxcross: true
 
     steps:
       - name: Checkout
@@ -55,57 +53,17 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      # Native Linux x86_64 build
-      - name: Build (native)
-        if: ${{ !matrix.cross }}
+      - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      # Cross-compile Linux ARM64 and Windows
-      - name: Install cross
-        if: ${{ matrix.cross && !matrix.use_osxcross }}
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
-      # Pre-build frontend for cross-compilation (Docker images don't have Node.js)
-      - name: Build frontend (for cross)
-        if: ${{ matrix.cross && !matrix.use_osxcross }}
-        run: |
-          cd web
-          npm ci
-          npm run build
-
-      - name: Build (cross)
-        if: ${{ matrix.cross && !matrix.use_osxcross }}
-        env:
-          SKIP_FRONTEND_BUILD: "1"
-        run: cross build --release --target ${{ matrix.target }}
-
-      # Pre-build frontend for macOS cross-compilation (Docker image doesn't have Node.js)
-      - name: Build frontend (for cross)
-        if: ${{ matrix.use_osxcross }}
-        run: |
-          cd web
-          npm ci
-          npm run build
-
-      # macOS cross-compilation using osxcross Docker image
-      - name: Build (macOS cross)
-        if: ${{ matrix.use_osxcross }}
-        run: |
-          docker run --rm \
-            -v "$PWD":/app \
-            -w /app \
-            -e SKIP_FRONTEND_BUILD=1 \
-            joseluisq/rust-linux-darwin-builder:latest \
-            sh -c "cargo build --release --target ${{ matrix.target }}"
-
       - name: Prepare artifact
+        shell: bash
         run: |
           mkdir -p artifacts
-          TARGET="${{ matrix.target }}"
-          if [[ $TARGET == *windows* ]]; then
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe artifacts/${{ matrix.artifact }}
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe" "artifacts/${{ matrix.artifact }}"
           else
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} artifacts/${{ matrix.artifact }}
+            cp "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}" "artifacts/${{ matrix.artifact }}"
           fi
 
       - name: Upload artifact
