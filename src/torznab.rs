@@ -718,12 +718,58 @@ pub fn generate_results_xml(
             size
         ));
 
-        // Removed imdb_id/download_volume_factor fields not present in Lodestarr::TorrentResult struct (or check if they exist)
+        // Additional Torznab attributes (Jackett/Prowlarr parity)
+        if let Some(ref imdb_id) = result.imdb_id {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"imdb\" value=\"{}\" />\n",
+                escape_xml(imdb_id)
+            ));
+        }
 
-        // fields: title, guid, link, comments, pub_date, size, seeders, leechers, grabs, categories, infohash, magneturl, indexer.
-        // It does NOT have imdb_id. So I omit it.
+        if let Some(ref tmdb_id) = result.tmdb_id {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"tmdbid\" value=\"{}\" />\n",
+                tmdb_id
+            ));
+        }
+
+        if let Some(ref tvdb_id) = result.tvdb_id {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"tvdbid\" value=\"{}\" />\n",
+                tvdb_id
+            ));
+        }
+
+        if let Some(dvf) = result.download_volume_factor {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"downloadvolumefactor\" value=\"{}\" />\n",
+                dvf
+            ));
+        }
+
+        if let Some(uvf) = result.upload_volume_factor {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"uploadvolumefactor\" value=\"{}\" />\n",
+                uvf
+            ));
+        }
+
+        if let Some(ratio) = result.minimum_ratio {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"minimumratio\" value=\"{}\" />\n",
+                ratio
+            ));
+        }
+
+        if let Some(seedtime) = result.minimum_seedtime {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"minimumseedtime\" value=\"{}\" />\n",
+                seedtime
+            ));
+        }
 
         xml.push_str("  </item>\n");
+
     }
 
     xml.push_str("</channel>\n");
