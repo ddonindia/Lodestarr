@@ -44,11 +44,11 @@ pub struct SearchParams {
     pub year: Option<u32>,
     pub limit: Option<u32>,
     // Extended external IDs (Jackett/Prowlarr parity)
-    pub rid: Option<i32>,       // TVRage ID
-    pub tvmazeid: Option<i32>,  // TVMaze ID
-    pub traktid: Option<i32>,   // Trakt ID
-    pub doubanid: Option<i32>,  // Douban ID
-    pub genre: Option<String>,  // Genre filter
+    pub rid: Option<i32>,      // TVRage ID
+    pub tvmazeid: Option<i32>, // TVMaze ID
+    pub traktid: Option<i32>,  // Trakt ID
+    pub doubanid: Option<i32>, // Douban ID
+    pub genre: Option<String>, // Genre filter
     // Music search params
     pub album: Option<String>,
     pub artist: Option<String>,
@@ -559,12 +559,11 @@ pub fn generate_caps_xml(
         ));
     }
 
-
     xml.push_str("  </searching>\n");
 
     // Categories - hierarchical structure (Jackett/Prowlarr parity)
     xml.push_str("  <categories>\n");
-    
+
     // Group categories by their parent (id / 1000 * 1000)
     let mut parent_ids: Vec<i32> = categories
         .iter()
@@ -572,7 +571,7 @@ pub fn generate_caps_xml(
         .copied()
         .collect();
     parent_ids.sort();
-    
+
     for parent_id in &parent_ids {
         if let Some(parent_cat) = CATEGORIES.iter().find(|c| c.id == *parent_id) {
             // Start parent category
@@ -580,25 +579,25 @@ pub fn generate_caps_xml(
                 "    <category id=\"{}\" name=\"{}\">\n",
                 parent_cat.id, parent_cat.name
             ));
-            
+
             // Add subcategories
             for &sub_id in categories {
-                if sub_id / 1000 == parent_id / 1000 && sub_id != *parent_id {
-                    if let Some(sub_cat) = CATEGORIES.iter().find(|c| c.id == sub_id) {
-                        xml.push_str(&format!(
-                            "      <subcat id=\"{}\" name=\"{}\" />\n",
-                            sub_cat.id, sub_cat.name
-                        ));
-                    }
+                if sub_id / 1000 == parent_id / 1000
+                    && sub_id != *parent_id
+                    && let Some(sub_cat) = CATEGORIES.iter().find(|c| c.id == sub_id)
+                {
+                    xml.push_str(&format!(
+                        "      <subcat id=\"{}\" name=\"{}\" />\n",
+                        sub_cat.id, sub_cat.name
+                    ));
                 }
             }
-            
+
             xml.push_str("    </category>\n");
         }
     }
-    
-    xml.push_str("  </categories>\n");
 
+    xml.push_str("  </categories>\n");
 
     xml.push_str("</caps>\n");
     xml
@@ -826,7 +825,6 @@ pub fn generate_results_xml(
         }
 
         xml.push_str("  </item>\n");
-
     }
 
     xml.push_str("</channel>\n");

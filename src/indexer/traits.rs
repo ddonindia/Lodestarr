@@ -109,7 +109,6 @@ pub struct SearchCapabilities {
     pub book_publisher: bool,
 }
 
-
 impl SearchCapabilities {
     /// Default capabilities for a basic public indexer
     pub fn basic() -> Self {

@@ -106,7 +106,7 @@ pub struct TorrentResult {
     pub description: Option<String>,
 
     /// Genre tags
-    #[serde(rename = "Genre", skip_serializing_if = "Option::is_none")]  
+    #[serde(rename = "Genre", skip_serializing_if = "Option::is_none")]
     pub genre: Option<String>,
 
     /// Poster image URL
