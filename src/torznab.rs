@@ -371,6 +371,7 @@ impl TorznabClient {
                     download_volume_factor: None,
                     upload_volume_factor: None,
                     indexer: None,
+                    ..Default::default()
                 });
             }
         }
@@ -791,6 +792,36 @@ pub fn generate_results_xml(
             xml.push_str(&format!(
                 "    <torznab:attr name=\"minimumseedtime\" value=\"{}\" />\n",
                 seedtime
+            ));
+        }
+
+        // Indexer flags (Prowlarr parity)
+        for flag in &result.flags {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"tag\" value=\"{}\" />\n",
+                escape_xml(flag)
+            ));
+        }
+
+        // Additional metadata
+        if let Some(ref desc) = result.description {
+            xml.push_str(&format!(
+                "    <description>{}</description>\n",
+                escape_xml(desc)
+            ));
+        }
+
+        if let Some(ref genre) = result.genre {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"genre\" value=\"{}\" />\n",
+                escape_xml(genre)
+            ));
+        }
+
+        if let Some(ref poster) = result.poster {
+            xml.push_str(&format!(
+                "    <torznab:attr name=\"poster\" value=\"{}\" />\n",
+                escape_xml(poster)
             ));
         }
 

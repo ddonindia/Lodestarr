@@ -96,6 +96,22 @@ pub struct TorrentResult {
     /// Indexer that returned this result
     #[serde(rename = "Indexer", skip_serializing_if = "Option::is_none")]
     pub indexer: Option<String>,
+
+    /// Indexer flags (freeleech, scene, internal, etc.)
+    #[serde(rename = "Flags", default, skip_serializing_if = "Vec::is_empty")]
+    pub flags: Vec<String>,
+
+    /// Description/summary text
+    #[serde(rename = "Description", skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+
+    /// Genre tags
+    #[serde(rename = "Genre", skip_serializing_if = "Option::is_none")]  
+    pub genre: Option<String>,
+
+    /// Poster image URL
+    #[serde(rename = "Poster", skip_serializing_if = "Option::is_none")]
+    pub poster: Option<String>,
 }
 
 impl TorrentResult {
@@ -124,6 +140,10 @@ impl TorrentResult {
             download_volume_factor: None,
             upload_volume_factor: None,
             indexer: None,
+            flags: Vec::new(),
+            description: None,
+            genre: None,
+            poster: None,
         }
     }
 }
