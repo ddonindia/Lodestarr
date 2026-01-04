@@ -17,6 +17,12 @@ fn main() {
     // (clippy needs to compile, which triggers build.rs again)
     // Run 'cargo clippy -- -D warnings' manually before pushing
 
+    // Skip frontend build if SKIP_FRONTEND_BUILD is set (used in cross-compilation)
+    if std::env::var("SKIP_FRONTEND_BUILD").is_ok() {
+        println!("cargo:warning=SKIP_FRONTEND_BUILD set, skipping frontend build");
+        return;
+    }
+
     // Always build the frontend to ensure it's up-to-date
     build_frontend();
 }
