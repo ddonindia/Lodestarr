@@ -799,6 +799,111 @@ impl IndexerDefinition {
         categories
     }
 
+    /// Extract search capabilities from this definition's YAML modes
+    /// Reads caps.modes like {"search": ["q"], "tv-search": ["q","season","ep","imdbid"]}
+    pub fn extract_search_capabilities(&self) -> crate::indexer::SearchCapabilities {
+        let mut caps = crate::indexer::SearchCapabilities::default();
+
+        for (mode, params) in &self.caps.modes {
+            let params_set: std::collections::HashSet<&str> =
+                params.iter().map(|s| s.as_str()).collect();
+
+            match mode.as_str() {
+                "search" => {
+                    caps.search = true;
+                }
+                "tv-search" => {
+                    caps.tv_search = true;
+                    caps.season_episode =
+                        params_set.contains("season") || params_set.contains("ep");
+                    if params_set.contains("imdbid") {
+                        caps.imdb_id = true;
+                    }
+                    if params_set.contains("tvdbid") {
+                        caps.tvdb_id = true;
+                    }
+                    if params_set.contains("tmdbid") {
+                        caps.tmdb_id = true;
+                    }
+                    if params_set.contains("rid") {
+                        caps.rid = true;
+                    }
+                    if params_set.contains("tvmazeid") {
+                        caps.tvmaze_id = true;
+                    }
+                    if params_set.contains("traktid") {
+                        caps.trakt_id = true;
+                    }
+                    if params_set.contains("doubanid") {
+                        caps.douban_id = true;
+                    }
+                    if params_set.contains("year") {
+                        caps.year = true;
+                    }
+                    if params_set.contains("genre") {
+                        caps.genre = true;
+                    }
+                }
+                "movie-search" => {
+                    caps.movie_search = true;
+                    if params_set.contains("imdbid") {
+                        caps.imdb_id = true;
+                    }
+                    if params_set.contains("tmdbid") {
+                        caps.tmdb_id = true;
+                    }
+                    if params_set.contains("traktid") {
+                        caps.trakt_id = true;
+                    }
+                    if params_set.contains("doubanid") {
+                        caps.douban_id = true;
+                    }
+                    if params_set.contains("year") {
+                        caps.year = true;
+                    }
+                    if params_set.contains("genre") {
+                        caps.genre = true;
+                    }
+                }
+                "music-search" => {
+                    caps.music_search = true;
+                    if params_set.contains("label") {
+                        caps.music_label = true;
+                    }
+                    if params_set.contains("track") {
+                        caps.music_track = true;
+                    }
+                    if params_set.contains("year") {
+                        caps.year = true;
+                    }
+                    if params_set.contains("genre") {
+                        caps.genre = true;
+                    }
+                }
+                "book-search" => {
+                    caps.book_search = true;
+                    if params_set.contains("publisher") {
+                        caps.book_publisher = true;
+                    }
+                    if params_set.contains("year") {
+                        caps.year = true;
+                    }
+                    if params_set.contains("genre") {
+                        caps.genre = true;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // If no modes defined at all, fall back to basic capabilities
+        if self.caps.modes.is_empty() {
+            return crate::indexer::SearchCapabilities::basic();
+        }
+
+        caps
+    }
+
     /// Resolve standard Torznab category name to ID
     pub fn resolve_torznab_category_name(name: &str) -> Option<i32> {
         match name {

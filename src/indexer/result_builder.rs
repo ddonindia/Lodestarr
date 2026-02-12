@@ -90,7 +90,40 @@ pub fn make_torrent_result(
         result.imdb_id = Some(imdb.clone());
     }
 
-    // 10. Date
+    // 10. TMDB ID
+    if let Some(tmdb) = ctx.result.get("tmdbid") {
+        result.tmdb_id = tmdb.parse().ok();
+    }
+
+    // 11. TVDB ID
+    if let Some(tvdb) = ctx.result.get("tvdbid") {
+        result.tvdb_id = tvdb.parse().ok();
+    }
+
+    // 12. Genre
+    if let Some(genre) = ctx.result.get("genre") {
+        result.genre = Some(genre.clone());
+    }
+
+    // 13. Description
+    if let Some(desc) = ctx.result.get("description") {
+        result.description = Some(desc.clone());
+    }
+
+    // 14. Poster
+    if let Some(poster) = ctx.result.get("poster") {
+        result.poster = Some(make_absolute_url(poster, base_url));
+    }
+
+    // 15. Download/Upload volume factors (freeleech detection)
+    if let Some(dvf) = ctx.result.get("downloadvolumefactor") {
+        result.download_volume_factor = dvf.parse().ok();
+    }
+    if let Some(uvf) = ctx.result.get("uploadvolumefactor") {
+        result.upload_volume_factor = uvf.parse().ok();
+    }
+
+    // 16. Date
     if let Some(date_str) = ctx.result.get("date") {
         result.publish_date = parse_date_field(date_str);
     }

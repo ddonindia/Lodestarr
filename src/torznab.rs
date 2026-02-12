@@ -611,6 +611,25 @@ pub fn generate_results_xml(
     proxy_base_url: Option<&str>,
     indexer_id: Option<&str>,
 ) -> String {
+    generate_results_xml_paged(
+        results,
+        indexer_name,
+        proxy_base_url,
+        indexer_id,
+        0,
+        results.len(),
+    )
+}
+
+/// Generate a Torznab search results XML response with pagination info
+pub fn generate_results_xml_paged(
+    results: &[TorrentResult],
+    indexer_name: &str,
+    proxy_base_url: Option<&str>,
+    indexer_id: Option<&str>,
+    offset: usize,
+    total: usize,
+) -> String {
     let mut xml = String::from(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
     xml.push('\n');
     xml.push_str(r#"<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:torznab="http://torznab.com/schemas/2015/feed">"#);
@@ -619,6 +638,12 @@ pub fn generate_results_xml(
     // Channel info
     xml.push_str(&format!("  <title>{}</title>\n", escape_xml(indexer_name)));
     xml.push_str("  <description>Lodestarr Torznab Feed</description>\n");
+
+    // Response element with offset/total (Jackett parity)
+    xml.push_str(&format!(
+        "  <response offset=\"{}\" total=\"{}\" />\n",
+        offset, total
+    ));
 
     // Results
     for result in results {

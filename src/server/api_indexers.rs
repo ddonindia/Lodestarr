@@ -324,6 +324,21 @@ pub struct TorznabParams {
     pub title: Option<String>,
     /// Author (for book)
     pub author: Option<String>,
+    // Extended IDs (Jackett parity)
+    /// TVRage ID
+    pub rid: Option<i32>,
+    /// TVMaze ID
+    pub tvmazeid: Option<i32>,
+    /// Trakt ID
+    pub traktid: Option<i32>,
+    /// Douban ID
+    pub doubanid: Option<i32>,
+    /// Record label (for music)
+    pub label: Option<String>,
+    /// Track name (for music)
+    pub track: Option<String>,
+    /// Publisher (for book)
+    pub publisher: Option<String>,
 }
 
 /// Torznab API handler
@@ -367,19 +382,15 @@ pub(super) async fn torznab_api(
 
     match action {
         "caps" => {
-            // Return capabilities
-            let caps = crate::indexer::SearchCapabilities::basic();
-            let categories = vec![
-                // Console
-                1000, 1010, 1020, 1030, 1040, 1050, 1080, 1090, // Movies
-                2000, 2010, 2020, 2030, 2040, 2045, 2050, 2060, 2070, 2080, 2090, // Audio
-                3000, 3010, 3020, 3030, 3040, 3050, // PC
-                4000, 4010, 4020, 4030, 4050, // TV
-                5000, 5010, 5020, 5030, 5040, 5045, 5050, 5060, 5070, 5080, 5090, // XXX
-                6000, 6010, 6020, 6030, 6040, 6045, 6050, 6080, 6090, // Books
-                7000, 7010, 7020, 7030, 7040, 7050, // Other
-                8000, 8010, 8020,
-            ];
+            // Read capabilities from the YAML definition's modes
+            let caps = definition.extract_search_capabilities();
+            let categories = definition.extract_categories();
+            // Fall back to broad categories if definition has none
+            let categories = if categories.is_empty() {
+                vec![1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000]
+            } else {
+                categories
+            };
 
             (
                 StatusCode::OK,
@@ -389,7 +400,7 @@ pub(super) async fn torznab_api(
                 .into_response()
         }
         "search" | "tvsearch" | "movie" | "music" | "book" => {
-            // Build search query
+            // Build search query with all Jackett-compatible parameters
             let query = SearchQuery {
                 search_type: SearchType::from_param(action).unwrap_or_default(),
                 query: params.q,
@@ -404,13 +415,18 @@ pub(super) async fn torznab_api(
                 imdb_id: params.imdbid,
                 tvdb_id: params.tvdbid,
                 tmdb_id: params.tmdbid,
+                tvmaze_id: params.tvmazeid,
+                trakt_id: params.traktid,
+                douban_id: params.doubanid,
                 year: params.year,
                 genre: params.genre,
                 album: params.album,
                 artist: params.artist,
+                label: params.label,
+                track: params.track,
                 title: params.title,
                 author: params.author,
-                ..Default::default()
+                publisher: params.publisher,
             };
 
             // Execute search with proxy support
@@ -488,7 +504,7 @@ async fn torznab_all_indexers(
             let config = state.config.read().await;
             let manager = state.native_indexers.read().await;
 
-            // Build search query for native indexers
+            // Build search query for native indexers (all Jackett-compatible params)
             let query = SearchQuery {
                 search_type: SearchType::from_param(action).unwrap_or_default(),
                 query: params.q.clone(),
@@ -504,16 +520,21 @@ async fn torznab_all_indexers(
                 imdb_id: params.imdbid.clone(),
                 tvdb_id: params.tvdbid,
                 tmdb_id: params.tmdbid,
+                tvmaze_id: params.tvmazeid,
+                trakt_id: params.traktid,
+                douban_id: params.doubanid,
                 year: params.year,
                 genre: params.genre.clone(),
                 album: params.album.clone(),
                 artist: params.artist.clone(),
+                label: params.label.clone(),
+                track: params.track.clone(),
                 title: params.title.clone(),
                 author: params.author.clone(),
-                ..Default::default()
+                publisher: params.publisher.clone(),
             };
 
-            // Build search params for proxied indexers
+            // Build search params for proxied indexers (forward ALL params)
             let search_params = SearchParams {
                 query: params.q.clone().unwrap_or_default(),
                 search_type: action.to_string(),
@@ -525,7 +546,18 @@ async fn torznab_all_indexers(
                 tvdbid: params.tvdbid,
                 year: params.year,
                 limit: params.limit,
-                ..Default::default()
+                rid: params.rid,
+                tvmazeid: params.tvmazeid,
+                traktid: params.traktid,
+                doubanid: params.doubanid,
+                genre: params.genre.clone(),
+                album: params.album.clone(),
+                artist: params.artist.clone(),
+                label: params.label.clone(),
+                track: params.track.clone(),
+                title: params.title.clone(),
+                author: params.author.clone(),
+                publisher: params.publisher.clone(),
             };
 
             let proxy_base = proxy_base_url.to_string();
@@ -613,6 +645,14 @@ async fn torznab_all_indexers(
 
             // Sort by seeders (descending)
             all_results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
+
+            // Apply offset pagination (Jackett parity)
+            let offset = params.offset.unwrap_or(0) as usize;
+            if offset > 0 && offset < all_results.len() {
+                all_results = all_results.split_off(offset);
+            } else if offset >= all_results.len() {
+                all_results.clear();
+            }
 
             // Limit results
             let limit = params.limit.unwrap_or(100) as usize;

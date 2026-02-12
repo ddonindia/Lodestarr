@@ -188,6 +188,13 @@ pub fn extract_html_fields(element: &ElementRef, fields: &Fields, ctx: &mut Temp
     extract_std("infohash", &fields.infohash, ctx);
     extract_std("imdbid", &fields.imdbid, ctx);
     extract_std("imdb", &fields.imdb, ctx);
+    extract_std("tmdbid", &fields.tmdbid, ctx);
+    extract_std("tvdbid", &fields.tvdbid, ctx);
+    extract_std("genre", &fields.genre, ctx);
+    extract_std("description", &fields.description, ctx);
+    extract_std("poster", &fields.poster, ctx);
+    extract_std("downloadvolumefactor", &fields.downloadvolumefactor, ctx);
+    extract_std("uploadvolumefactor", &fields.uploadvolumefactor, ctx);
 
     // Extra fields
     for (name, selector_def) in &fields.extra {
@@ -293,6 +300,13 @@ pub fn extract_json_fields(
     extract_std("infohash", &fields.infohash, ctx);
     extract_std("imdbid", &fields.imdbid, ctx);
     extract_std("imdb", &fields.imdb, ctx);
+    extract_std("tmdbid", &fields.tmdbid, ctx);
+    extract_std("tvdbid", &fields.tvdbid, ctx);
+    extract_std("genre", &fields.genre, ctx);
+    extract_std("description", &fields.description, ctx);
+    extract_std("poster", &fields.poster, ctx);
+    extract_std("downloadvolumefactor", &fields.downloadvolumefactor, ctx);
+    extract_std("uploadvolumefactor", &fields.uploadvolumefactor, ctx);
 
     // Extra fields
     for (name, selector_def) in &fields.extra {
