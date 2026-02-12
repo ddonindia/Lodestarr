@@ -10,16 +10,17 @@ import { useDownloadClients } from '../hooks/useDownloadClients';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { useTorrentMeta } from '../hooks/useTorrentMeta';
 
-interface CachedSearch {
-    cache_key: string;
+interface RecentSearch {
+    id: number;
     query: string;
     indexer: string;
-    expires_at: string;
+    timestamp: string;
     result_count: number;
+    has_results: boolean;
 }
 
 export default function RecentActivity() {
-    const [cachedSearches, setCachedSearches] = useState<CachedSearch[]>([]);
+    const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
     const [loading, setLoading] = useState(true);
     const [clearing, setClearing] = useState(false);
     const [selectedResults, setSelectedResults] = useState<TorrentResult[] | null>(null);
@@ -41,8 +42,8 @@ export default function RecentActivity() {
         try {
             const res = await fetch('/api/history');
             if (res.ok) {
-                const data: CachedSearch[] = await res.json();
-                setCachedSearches(data);
+                const data: RecentSearch[] = await res.json();
+                setRecentSearches(data);
             }
         } catch (err) {
             console.error('Failed to load activity:', err);
@@ -55,34 +56,33 @@ export default function RecentActivity() {
     const clearActivity = async () => {
         setClearing(true);
         try {
-            const res = await fetch('/api/settings/cache/clear', { method: 'POST' });
+            const res = await fetch('/api/stats/clear', { method: 'POST' });
             if (res.ok) {
-                toast.success('Cache cleared');
-                setCachedSearches([]);
+                toast.success('Search history cleared');
+                setRecentSearches([]);
             } else {
                 throw new Error('Failed to clear');
             }
         } catch (err) {
-            toast.error('Failed to clear cache');
+            toast.error('Failed to clear history');
         } finally {
             setClearing(false);
         }
     };
 
-    const viewResults = async (cacheKey: string, query: string) => {
+    const viewResults = async (id: number, query: string) => {
         setLoadingResults(true);
         setSelectedQuery(query);
         try {
-            const encodedKey = encodeURIComponent(cacheKey);
-            const res = await fetch(`/api/history/${encodedKey}`);
+            const res = await fetch(`/api/history/${id}`);
             if (res.ok) {
                 const results: TorrentResult[] = await res.json();
                 setSelectedResults(results);
             } else {
-                toast.error('Cached results expired or not found');
+                toast.error('Results not available for this search');
             }
         } catch (err) {
-            toast.error('Failed to load cached results');
+            toast.error('Failed to load results');
         } finally {
             setLoadingResults(false);
         }
@@ -102,7 +102,7 @@ export default function RecentActivity() {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Recent Searches</CardTitle>
                     <div className="flex items-center gap-2">
-                        <Badge variant="neutral">{cachedSearches.length} cached</Badge>
+                        <Badge variant="neutral">{recentSearches.length} searches</Badge>
                         <Button
                             variant="secondary"
                             size="sm"
@@ -115,7 +115,7 @@ export default function RecentActivity() {
                             variant="danger"
                             size="sm"
                             onClick={clearActivity}
-                            disabled={clearing || cachedSearches.length === 0}
+                            disabled={clearing || recentSearches.length === 0}
                             loading={clearing}
                         >
                             <Trash2 className="w-4 h-4 mr-1" />
@@ -131,12 +131,12 @@ export default function RecentActivity() {
                                     <th className="px-6 py-3">Query</th>
                                     <th className="px-6 py-3">Indexer</th>
                                     <th className="px-6 py-3 text-center">Results</th>
-                                    <th className="px-6 py-3">Expires</th>
+                                    <th className="px-6 py-3">Time</th>
                                     <th className="px-6 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-800 bg-[#1a1a1a]">
-                                {cachedSearches.length === 0 ? (
+                                {recentSearches.length === 0 ? (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-12 text-center opacity-50">
                                             <Search className="w-8 h-8 mx-auto mb-2 opacity-20" />
@@ -144,8 +144,8 @@ export default function RecentActivity() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    cachedSearches.map((search, idx) => (
-                                        <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                    recentSearches.map((search) => (
+                                        <tr key={search.id} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-3 font-medium text-white max-w-xs truncate" title={search.query}>
                                                 {search.query || '(empty)'}
                                             </td>
@@ -158,14 +158,14 @@ export default function RecentActivity() {
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-3 text-neutral-400 font-mono text-xs">
-                                                {new Date(search.expires_at).toLocaleString()}
+                                                {new Date(search.timestamp).toLocaleString()}
                                             </td>
                                             <td className="px-6 py-3 text-right">
                                                 <Button
                                                     variant="secondary"
                                                     size="sm"
-                                                    onClick={() => viewResults(search.cache_key, search.query)}
-                                                    disabled={search.result_count === 0}
+                                                    onClick={() => viewResults(search.id, search.query)}
+                                                    disabled={!search.has_results}
                                                 >
                                                     <Eye className="w-4 h-4 mr-1" />
                                                     View

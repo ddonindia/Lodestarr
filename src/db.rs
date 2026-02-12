@@ -25,6 +25,10 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
     )
     .expect("Failed to create search_logs table");
 
+    // Migration: add results_json column if it doesn't exist
+    conn.execute("ALTER TABLE search_logs ADD COLUMN results_json TEXT", [])
+        .ok(); // Ignore error if column already exists
+
     conn.execute(
         "CREATE TABLE IF NOT EXISTS search_cache (
             key TEXT PRIMARY KEY,
@@ -76,16 +80,28 @@ pub fn log_search(
     result_count: usize,
     duration_ms: u128,
 ) -> anyhow::Result<()> {
+    log_search_with_results(pool, query, indexer, result_count, duration_ms, None)
+}
+
+pub fn log_search_with_results(
+    pool: &DbPool,
+    query: &str,
+    indexer: &str,
+    result_count: usize,
+    duration_ms: u128,
+    results_json: Option<&str>,
+) -> anyhow::Result<()> {
     let conn = pool.get()?;
     conn.execute(
-        "INSERT INTO search_logs (query, indexer, timestamp, result_count, duration_ms)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
+        "INSERT INTO search_logs (query, indexer, timestamp, result_count, duration_ms, results_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![
             query,
             indexer,
             Utc::now(),
             result_count as i64,
-            duration_ms as i64
+            duration_ms as i64,
+            results_json
         ],
     )?;
     Ok(())
@@ -94,21 +110,36 @@ pub fn log_search(
 pub fn get_recent_logs(pool: &DbPool, limit: usize) -> anyhow::Result<Vec<SearchLog>> {
     let conn = pool.get()?;
     let mut stmt = conn.prepare(
-        "SELECT query, indexer, timestamp, result_count FROM search_logs 
+        "SELECT id, query, indexer, timestamp, result_count, results_json IS NOT NULL FROM search_logs 
          ORDER BY timestamp DESC LIMIT ?",
     )?;
     let logs = stmt
         .query_map([limit], |row| {
             Ok(SearchLog {
-                query: row.get(0)?,
-                indexer: row.get(1)?,
-                timestamp: row.get(2)?,
-                result_count: row.get::<_, i64>(3)? as usize,
+                id: row.get(0)?,
+                query: row.get(1)?,
+                indexer: row.get(2)?,
+                timestamp: row.get(3)?,
+                result_count: row.get::<_, i64>(4)? as usize,
+                has_results: row.get::<_, bool>(5).unwrap_or(false),
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(logs)
+}
+
+/// Get search results JSON by search log ID
+pub fn get_search_log_results(pool: &DbPool, id: i64) -> anyhow::Result<Option<String>> {
+    let conn = pool.get()?;
+    let res: Option<String> = conn
+        .query_row(
+            "SELECT results_json FROM search_logs WHERE id = ?1",
+            params![id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    Ok(res)
 }
 
 pub fn get_total_searches(pool: &DbPool) -> anyhow::Result<usize> {
@@ -184,78 +215,12 @@ pub fn clear_cache(pool: &DbPool) -> anyhow::Result<usize> {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SearchLog {
+    pub id: i64,
     pub query: String,
     pub indexer: String,
     pub timestamp: DateTime<Utc>,
     pub result_count: usize,
-}
-
-/// Represents a cached search entry
-#[derive(Serialize, Deserialize, Clone)]
-pub struct CachedSearch {
-    pub cache_key: String,
-    pub query: String,
-    pub indexer: String,
-    pub expires_at: DateTime<Utc>,
-    pub result_count: usize,
-}
-
-/// Get list of all non-expired cached searches
-pub fn get_cached_search_list(pool: &DbPool) -> anyhow::Result<Vec<CachedSearch>> {
-    let conn = pool.get()?;
-    let mut stmt = conn.prepare(
-        "SELECT key, results, expires_at FROM search_cache WHERE expires_at > ?1 ORDER BY expires_at DESC",
-    )?;
-
-    let rows = stmt.query_map(params![Utc::now()], |row| {
-        let key: String = row.get(0)?;
-        let results_json: String = row.get(1)?;
-        let expires_at: DateTime<Utc> = row.get(2)?;
-        Ok((key, results_json, expires_at))
-    })?;
-
-    let mut searches = Vec::new();
-    for row in rows {
-        let (key, results_json, expires_at) = row?;
-
-        // Parse key to extract query and indexer
-        // Format: "proxied:indexer:query:category" or "native:indexer:query:..."
-        let parts: Vec<&str> = key.split(':').collect();
-        let (indexer, query) = if parts.len() >= 3 {
-            (parts[1].to_string(), parts[2].to_string())
-        } else {
-            ("unknown".to_string(), key.clone())
-        };
-
-        // Count results from JSON
-        let result_count = serde_json::from_str::<Vec<serde_json::Value>>(&results_json)
-            .map(|v| v.len())
-            .unwrap_or(0);
-
-        searches.push(CachedSearch {
-            cache_key: key,
-            query,
-            indexer,
-            expires_at,
-            result_count,
-        });
-    }
-
-    Ok(searches)
-}
-
-/// Get cached results by key (returns raw JSON string)
-pub fn get_cached_results_by_key(pool: &DbPool, key: &str) -> anyhow::Result<Option<String>> {
-    let conn = pool.get()?;
-    let res: Option<String> = conn
-        .query_row(
-            "SELECT results FROM search_cache WHERE key = ?1 AND expires_at > ?2",
-            params![key, Utc::now()],
-            |r| r.get(0),
-        )
-        .optional()?;
-
-    Ok(res)
+    pub has_results: bool,
 }
 
 /// Record of a download sent to a client or saved to server

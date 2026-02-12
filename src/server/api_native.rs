@@ -415,19 +415,19 @@ pub(super) async fn search_native(
 
     // Record stat
     let duration = start.elapsed();
-    let _ = crate::db::log_search(
+    let serialized = serde_json::to_string(&all_results).ok();
+    let _ = crate::db::log_search_with_results(
         &state.db_pool,
         &params.q,
         target,
         all_results.len(),
         duration.as_millis(),
+        serialized.as_deref(),
     );
 
-    // Cache results
-    if !all_results.is_empty()
-        && let Ok(serialized) = serde_json::to_string(&all_results)
-    {
-        let _ = crate::db::set_cached_results(&state.db_pool, &cache_key, &serialized, 1);
+    // Cache results (for quick re-fetch within TTL)
+    if let Some(ref json) = serialized {
+        let _ = crate::db::set_cached_results(&state.db_pool, &cache_key, json, 1);
     }
 
     Json(all_results).into_response()
