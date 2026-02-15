@@ -165,20 +165,14 @@ pub(super) async fn search_api(
 
     // Record stat
     let duration = start.elapsed();
-    let serialized = serde_json::to_string(&all_results).ok();
-    let _ = crate::db::log_search_with_results(
+    log_search_helper(
         &state.db_pool,
         &params.q,
         target,
-        all_results.len(),
-        duration.as_millis(),
-        serialized.as_deref(),
+        &all_results,
+        duration,
+        Some(&cache_key),
     );
-
-    // Cache results (for quick re-fetch within TTL)
-    if let Some(ref json) = serialized {
-        let _ = crate::db::set_cached_results(&state.db_pool, &cache_key, json, 1);
-    }
 
     // Sort by seeders
     all_results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
@@ -348,6 +342,7 @@ pub(super) async fn torznab_api(
     Query(params): Query<TorznabParams>,
     headers: axum::http::HeaderMap,
 ) -> impl IntoResponse {
+    let start = std::time::Instant::now();
     // Extract request base URL for proxy download links
     let host = headers
         .get("host")
@@ -400,10 +395,12 @@ pub(super) async fn torznab_api(
                 .into_response()
         }
         "search" | "tvsearch" | "movie" | "music" | "book" => {
+            let log_query = get_search_description(&params);
+
             // Build search query with all Jackett-compatible parameters
             let query = SearchQuery {
                 search_type: SearchType::from_param(action).unwrap_or_default(),
-                query: params.q,
+                query: params.q.clone(),
                 categories: params
                     .cat
                     .map(|c| c.split(',').filter_map(|s| s.parse().ok()).collect())
@@ -438,17 +435,28 @@ pub(super) async fn torznab_api(
                 .search(&definition, &query, settings.as_ref())
                 .await
             {
-                Ok(results) => (
-                    StatusCode::OK,
-                    [("Content-Type", "application/xml")],
-                    crate::torznab::generate_results_xml(
+                Ok(results) => {
+                    log_search_helper(
+                        &state.db_pool,
+                        &log_query,
+                        &definition.id,
                         &results,
-                        &definition.name,
-                        Some(&proxy_base_url),
-                        Some(&definition.id),
-                    ),
-                )
-                    .into_response(),
+                        start.elapsed(),
+                        None,
+                    );
+
+                    (
+                        StatusCode::OK,
+                        [("Content-Type", "application/xml")],
+                        crate::torznab::generate_results_xml(
+                            &results,
+                            &definition.name,
+                            Some(&proxy_base_url),
+                            Some(&definition.id),
+                        ),
+                    )
+                        .into_response()
+                }
                 Err(e) => {
                     tracing::error!("Torznab search failed for {}: {}", definition.id, e);
                     (
@@ -475,6 +483,7 @@ async fn torznab_all_indexers(
     params: TorznabParams,
     proxy_base_url: &str,
 ) -> axum::response::Response {
+    let start = std::time::Instant::now();
     let action = params.t.as_deref().unwrap_or("search");
 
     match action {
@@ -658,6 +667,15 @@ async fn torznab_all_indexers(
             let limit = params.limit.unwrap_or(100) as usize;
             all_results.truncate(limit);
 
+            log_search_helper(
+                &state.db_pool,
+                &get_search_description(&params),
+                "all",
+                &all_results,
+                start.elapsed(),
+                None,
+            );
+
             (
                 StatusCode::OK,
                 [("Content-Type", "application/xml")],
@@ -809,5 +827,88 @@ mod tests {
         // Magnet URL should NOT be proxied
         assert!(xml.contains("magnet:?xt=urn:btih:abc123"));
         assert!(!xml.contains("/api/v2.0/indexers/all/dl?link=bWFnbmV0"));
+    }
+}
+
+/// Generate a descriptive string for a search request
+fn get_search_description(params: &TorznabParams) -> String {
+    if let Some(q) = &params.q
+        && !q.is_empty()
+    {
+        return q.clone();
+    }
+
+    let mut parts = Vec::new();
+    let action = params.t.as_deref().unwrap_or("search");
+
+    // Add action type tag if it's not a generic search
+    if action != "search" {
+        parts.push(format!("[{}]", action));
+    } else {
+        parts.push("[RSS]".to_string());
+    }
+
+    // Add identifier if present
+    if let Some(id) = &params.imdbid
+        && !id.is_empty()
+    {
+        parts.push(format!("IMDB: {}", id));
+    }
+    if let Some(id) = params.tvdbid {
+        parts.push(format!("TVDB: {}", id));
+    }
+    if let Some(id) = params.tmdbid {
+        parts.push(format!("TMDB: {}", id));
+    }
+
+    // Add season/episode
+    if let Some(s) = params.season {
+        if let Some(e) = params.ep {
+            parts.push(format!("S{:02}E{:02}", s, e));
+        } else {
+            parts.push(format!("Season {}", s));
+        }
+    }
+
+    // Add category
+    if let Some(cat) = &params.cat
+        && !cat.is_empty()
+    {
+        parts.push(format!("Cat: {}", cat));
+    }
+
+    if parts.is_empty() {
+        return "(empty)".to_string();
+    }
+
+    parts.join(" ")
+}
+
+/// Helper to log search results to database and optionally cache them
+fn log_search_helper(
+    pool: &crate::db::DbPool,
+    query: &str,
+    indexer: &str,
+    results: &[TorrentResult],
+    duration: std::time::Duration,
+    cache_key: Option<&str>,
+) {
+    let serialized = serde_json::to_string(results).ok();
+
+    // Log to history
+    let _ = crate::db::log_search_with_results(
+        pool,
+        query,
+        indexer,
+        results.len(),
+        duration.as_millis(),
+        serialized.as_deref(),
+    );
+
+    // Cache results if key provided
+    if let Some(key) = cache_key
+        && let Some(ref json) = serialized
+    {
+        let _ = crate::db::set_cached_results(pool, key, json, 1);
     }
 }

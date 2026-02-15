@@ -1,7 +1,8 @@
-import { Copy, Settings2, ToggleLeft, ToggleRight, Trash2, FlaskConical } from 'lucide-react';
-import { Button, Badge, Spinner } from '../ui';
+import { Copy, Settings2, ToggleLeft, ToggleRight, Trash2, FlaskConical, Eye } from 'lucide-react';
+import { useState } from 'react';
+import { Button, Badge, Spinner, Dialog } from '../ui';
 import type { UnifiedIndexer, LocalIndexer } from '../../types/indexer';
-import toast from 'react-hot-toast';
+import { useCopyToClipboard } from '../../hooks/useCopyToClipboard';
 
 interface InstalledIndexersTableProps {
     indexers: UnifiedIndexer[];
@@ -21,15 +22,17 @@ export default function InstalledIndexersTable({
     onQuickTest
 }: InstalledIndexersTableProps) {
 
-    const copyTorznabUrl = async (indexerId: string) => {
+    const { copyToClipboard } = useCopyToClipboard();
+    const [showUrlIndexer, setShowUrlIndexer] = useState<UnifiedIndexer | null>(null);
+
+    const getTorznabUrl = (indexerId: string) => {
         const baseUrl = window.location.origin;
-        const torznabUrl = `${baseUrl}/api/v2.0/indexers/${indexerId}/results/torznab/api`;
-        try {
-            await navigator.clipboard.writeText(torznabUrl);
-            toast.success('Torznab URL copied to clipboard!');
-        } catch {
-            toast.error('Failed to copy URL');
-        }
+        return `${baseUrl}/api/v2.0/indexers/${indexerId}/results/torznab/api`;
+    };
+
+    const handleCopyUrl = (indexerId: string) => {
+        const url = getTorznabUrl(indexerId);
+        copyToClipboard(url, `torznab-${indexerId}`);
     };
 
     // Action buttons component (reused in both layouts)
@@ -48,15 +51,26 @@ export default function InstalledIndexersTable({
                 </Button>
             )}
             {indexer.isNative && (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyTorznabUrl(indexer.id)}
-                    title="Copy Torznab URL"
-                    className="hover:bg-neutral-800 text-neutral-400 hover:text-white"
-                >
-                    <Copy size={16} />
-                </Button>
+                <>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowUrlIndexer(indexer)}
+                        title="Show Torznab URL"
+                        className="hover:bg-neutral-800 text-neutral-400 hover:text-white"
+                    >
+                        <Eye size={16} />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyUrl(indexer.id)}
+                        title="Copy Torznab URL"
+                        className="hover:bg-neutral-800 text-neutral-400 hover:text-white"
+                    >
+                        <Copy size={16} />
+                    </Button>
+                </>
             )}
             <Button
                 variant="secondary"
@@ -199,6 +213,34 @@ export default function InstalledIndexersTable({
                     </tbody>
                 </table>
             </div>
+
+            <Dialog
+                isOpen={!!showUrlIndexer}
+                onClose={() => setShowUrlIndexer(null)}
+                title="Torznab URL"
+                maxWidth="max-w-xl"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-neutral-400">
+                        Use this URL to add this indexer to Sonarr, Radarr, or Prowlarr.
+                    </p>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            readOnly
+                            value={showUrlIndexer ? getTorznabUrl(showUrlIndexer.id) : ''}
+                            className="flex-1 px-3 py-2 bg-black/30 border border-neutral-700 rounded-md text-sm font-mono text-neutral-300 focus:outline-none focus:border-neutral-500"
+                            onClick={(e) => e.currentTarget.select()}
+                        />
+                        <Button
+                            variant="secondary"
+                            onClick={() => showUrlIndexer && handleCopyUrl(showUrlIndexer.id)}
+                        >
+                            <Copy size={16} />
+                        </Button>
+                    </div>
+                </div>
+            </Dialog>
         </>
     );
 }
