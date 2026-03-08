@@ -58,6 +58,13 @@ export function getResultDetails(r: TorrentResult): string | null { return r.Com
 export function getResultInfoHash(r: TorrentResult): string | undefined { return r.InfoHash || r.info_hash; }
 export function getResultIndexerId(r: TorrentResult): string | null { return r.IndexerId || r.indexer_id || null; }
 
+export function getProxiedDownloadUrl(link: string | null | undefined, magnet: string | null | undefined, indexerId: string | null | undefined): string {
+    const targetUrl = magnet || link || '';
+    if (!targetUrl) return '';
+    if (targetUrl.startsWith('magnet:')) return targetUrl;
+    if (indexerId) return `${window.location.origin}/api/v2.0/indexers/${encodeURIComponent(indexerId)}/dl?link=${encodeURIComponent(targetUrl)}`;
+    return targetUrl;
+}
 
 export interface IndexerDefinition {
     id: string;

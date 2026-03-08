@@ -10,7 +10,8 @@ import {
     getResultCategories,
     getResultIndexerId,
     getResultLink,
-    getResultMagnet
+    getResultMagnet,
+    getProxiedDownloadUrl
 } from '../types';
 import { formatSize, formatDate } from '../utils/formatters';
 import { TORZNAB_CATEGORIES } from '../constants/categories';
@@ -60,6 +61,7 @@ export default function SearchResultsList({
                 const peers = getResultPeers(result);
                 const date = getResultDate(result);
                 const categories = getResultCategories(result);
+                const proxiedDownloadUrl = getProxiedDownloadUrl(link, magnet, indexerId);
 
                 return (
                     <div key={`${idx}-${title}`} className="rounded-lg p-4 space-y-3" style={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-border)' }}>
@@ -138,7 +140,7 @@ export default function SearchResultsList({
                                 <>
                                     {clients.length === 1 ? (
                                         <button
-                                            onClick={() => onSendToClient(clients[0].id, magnet || link || '', title)}
+                                            onClick={() => onSendToClient(clients[0].id, proxiedDownloadUrl, title)}
                                             className="px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                                             style={{ backgroundColor: 'var(--theme-bg)', border: '1px solid var(--theme-border)', color: 'var(--theme-accent)' }}
                                         >
@@ -148,7 +150,7 @@ export default function SearchResultsList({
                                         <select
                                             onChange={(e) => {
                                                 if (e.target.value) {
-                                                    onSendToClient(e.target.value, magnet || link || '', title);
+                                                    onSendToClient(e.target.value, proxiedDownloadUrl, title);
                                                     e.target.value = ''; // Reset
                                                 }
                                             }}

@@ -9,7 +9,8 @@ import {
     getResultIndexer,
     getResultDate,
     getResultMagnet,
-    getResultIndexerId
+    getResultIndexerId,
+    getProxiedDownloadUrl
 } from '../types';
 import { formatSize, formatDate } from '../utils/formatters';
 import { buttonSecondaryStyle } from '../styles/shared';
@@ -148,6 +149,7 @@ export default function SearchResultsTable({
                             const link = getResultLink(result);
                             const magnet = getResultMagnet(result);
                             const indexerId = getResultIndexerId(result);
+                            const proxiedDownloadUrl = getProxiedDownloadUrl(link, magnet, indexerId);
 
                             return (
                                 <tr key={`${idx}-${title}`} className="hover:bg-white/5 transition-colors group">
@@ -224,7 +226,7 @@ export default function SearchResultsTable({
                                                     <div className="relative group/client">
                                                         {clients.length === 1 ? (
                                                             <button
-                                                                onClick={() => onSendToClient(clients[0].id, magnet || link || '', title)}
+                                                                onClick={() => onSendToClient(clients[0].id, proxiedDownloadUrl, title)}
                                                                 className="p-2 rounded-md hover:bg-neutral-700 transition-colors"
                                                                 title={`Send to ${clients[0].name}`}
                                                                 style={buttonSecondaryStyle}
@@ -248,7 +250,7 @@ export default function SearchResultsTable({
                                                                     className="absolute inset-0 opacity-0 cursor-pointer"
                                                                     onChange={(e) => {
                                                                         if (e.target.value) {
-                                                                            onSendToClient(e.target.value, magnet || link || '', title);
+                                                                            onSendToClient(e.target.value, proxiedDownloadUrl, title);
                                                                             e.target.value = '';
                                                                         }
                                                                     }}

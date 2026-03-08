@@ -12,7 +12,8 @@ import {
     getResultMagnet,
     getResultLink,
     getResultDetails,
-    getResultIndexerId
+    getResultIndexerId,
+    getProxiedDownloadUrl
 } from '../types';
 import { formatSize } from '../utils/formatters';
 
@@ -62,6 +63,7 @@ export default function ResultDetailsModal({
     const link = getResultLink(result);
     const details = getResultDetails(result);
     const indexerId = getResultIndexerId(result);
+    const proxiedDownloadUrl = getProxiedDownloadUrl(link, magnet, indexerId);
 
     return (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
@@ -303,7 +305,7 @@ export default function ResultDetailsModal({
                                 {/* Send to Client - Single client */}
                                 {clients.length === 1 && onSendToClient && (magnet || link) && (
                                     <button
-                                        onClick={() => onSendToClient(clients[0].id, magnet || link || '', title)}
+                                        onClick={() => onSendToClient(clients[0].id, proxiedDownloadUrl, title)}
                                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
                                     >
                                         <Send className="w-4 h-4" />
@@ -319,7 +321,7 @@ export default function ResultDetailsModal({
                                             style={{ backgroundColor: '#059669' }}
                                             onChange={(e) => {
                                                 if (e.target.value) {
-                                                    onSendToClient(e.target.value, magnet || link || '', title);
+                                                    onSendToClient(e.target.value, proxiedDownloadUrl, title);
                                                     e.target.value = '';
                                                 }
                                             }}
