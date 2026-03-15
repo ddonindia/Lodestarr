@@ -1,4 +1,5 @@
 import type { TorrentResult } from '../../types';
+import { getResultCategories } from '../../types';
 import { TORZNAB_CATEGORIES } from '../../constants/categories';
 import { inputStyle } from '../../styles/shared';
 
@@ -23,7 +24,7 @@ export default function SearchFiltersBar({
     resultIndexers,
     results
 }: SearchFiltersBarProps) {
-    const categoryIds = Array.from(new Set(results.flatMap(r => r.Category || r.categories || []))).sort((a, b) => a - b);
+    const categoryIds = Array.from(new Set(results.flatMap(r => getResultCategories(r)))).sort((a, b) => a - b);
 
     return (
         <div

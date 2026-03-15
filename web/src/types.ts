@@ -55,7 +55,15 @@ export function getResultSeeders(r: TorrentResult): number { return r.Seeders ??
 export function getResultPeers(r: TorrentResult): number { return r.Peers ?? r.leechers ?? 0; }
 export function getResultIndexer(r: TorrentResult): string { return r.Indexer || r.indexer || 'Unknown'; }
 export function getResultDate(r: TorrentResult): string { return r.PublishDate || r.publish_date || ''; }
-export function getResultCategories(r: TorrentResult): number[] { return r.Category || r.categories || []; }
+export function getResultCategories(r: TorrentResult): number[] { 
+    const cats = (r.Category || r.categories) as any;
+    if (Array.isArray(cats)) return cats.map((c: any) => Number(c)).filter(c => !isNaN(c));
+    if (typeof cats === 'number') return [cats];
+    if (typeof cats === 'string') {
+        return cats.split(',').map((s: string) => parseInt(s.trim())).filter(n => !isNaN(n));
+    }
+    return []; 
+}
 export function getResultGuid(r: TorrentResult): string { return r.Guid || r.guid || ''; }
 export function getResultDetails(r: TorrentResult): string | null { return r.Comments || r.comments || null; }
 export function getResultInfoHash(r: TorrentResult): string | undefined { return r.InfoHash || r.info_hash; }

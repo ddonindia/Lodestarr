@@ -118,11 +118,9 @@ pub fn get_recent_logs(
     let mut where_clause = String::new();
     let mut params_vec = Vec::new();
 
-    if let Some(query) = q {
-        if !query.is_empty() {
-            where_clause = "WHERE query LIKE ?1 OR indexer LIKE ?1".to_string();
-            params_vec.push(rusqlite::types::Value::Text(format!("%{}%", query)));
-        }
+    if let Some(query) = q.filter(|q| !q.is_empty()) {
+        where_clause = "WHERE query LIKE ?1 OR indexer LIKE ?1".to_string();
+        params_vec.push(rusqlite::types::Value::Text(format!("%{}%", query)));
     }
 
     // Get total count first

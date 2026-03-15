@@ -182,13 +182,14 @@ export default function RecentActivity() {
             if (modalFilterIndexer && r.Indexer !== modalFilterIndexer) return false;
             if (modalFilterCategory) {
                 const catId = parseInt(modalFilterCategory);
-                if (!r.Category || !r.Category.includes(catId)) return false;
+                const cats = getResultCategories(r);
+                if (!cats.includes(catId)) return false;
             }
             if (!modalFilterText) return true;
             const lower = modalFilterText.toLowerCase();
             return r.Title.toLowerCase().includes(lower) ||
                 (r.Indexer?.toLowerCase().includes(lower)) ||
-                (r.Category || []).some(c => (TORZNAB_CATEGORIES[c] || '').toLowerCase().includes(lower));
+                getResultCategories(r).some(c => (TORZNAB_CATEGORIES[c] || '').toLowerCase().includes(lower));
         })
         .sort((a, b) => {
             if (!modalSortField) return 0;

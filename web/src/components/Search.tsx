@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import type { TorrentResult, IndexerDefinition, SortField } from '../types';
+import { getResultCategories } from '../types';
 import type { NativeSearchResult } from '../types/api';
 import SearchResultsTable from './SearchResultsTable';
 import SearchResultsList from './SearchResultsList';
@@ -230,13 +231,14 @@ export default function Search() {
         if (filterIndexer && r.Indexer !== filterIndexer) return false;
         if (filterCategory) {
             const catId = parseInt(filterCategory);
-            if (!r.Category || !r.Category.includes(catId)) return false;
+            const cats = getResultCategories(r);
+            if (!cats.includes(catId)) return false;
         }
         if (!filterText) return true;
         const lower = filterText.toLowerCase();
         return r.Title.toLowerCase().includes(lower) ||
             (r.Indexer?.toLowerCase().includes(lower)) ||
-            (r.Category || []).some(c => (TORZNAB_CATEGORIES[c] || '').toLowerCase().includes(lower));
+            getResultCategories(r).some(c => (TORZNAB_CATEGORIES[c] || '').toLowerCase().includes(lower));
     }).sort((a, b) => {
         if (!sortField) return 0;
 
