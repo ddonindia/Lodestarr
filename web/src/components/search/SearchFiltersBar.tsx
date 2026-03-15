@@ -23,7 +23,7 @@ export default function SearchFiltersBar({
     resultIndexers,
     results
 }: SearchFiltersBarProps) {
-    const categoryIds = Array.from(new Set(results.flatMap(r => r.Category || []))).sort((a, b) => a - b);
+    const categoryIds = Array.from(new Set(results.flatMap(r => r.Category || r.categories || []))).sort((a, b) => a - b);
 
     return (
         <div

@@ -107,14 +107,56 @@ pub fn log_search_with_results(
     Ok(())
 }
 
-pub fn get_recent_logs(pool: &DbPool, limit: usize) -> anyhow::Result<Vec<SearchLog>> {
+pub fn get_recent_logs(
+    pool: &DbPool,
+    q: Option<String>,
+    limit: usize,
+    offset: usize,
+) -> anyhow::Result<(Vec<SearchLog>, usize)> {
     let conn = pool.get()?;
-    let mut stmt = conn.prepare(
-        "SELECT id, query, indexer, timestamp, result_count, results_json IS NOT NULL FROM search_logs 
-         ORDER BY timestamp DESC LIMIT ?",
+
+    let mut where_clause = String::new();
+    let mut params_vec = Vec::new();
+
+    if let Some(query) = q {
+        if !query.is_empty() {
+            where_clause = "WHERE query LIKE ?1 OR indexer LIKE ?1".to_string();
+            params_vec.push(rusqlite::types::Value::Text(format!("%{}%", query)));
+        }
+    }
+
+    // Get total count first
+    let count_sql = format!("SELECT COUNT(*) FROM search_logs {}", where_clause);
+    let total_count: i64 = conn.query_row(
+        &count_sql,
+        rusqlite::params_from_iter(params_vec.clone()),
+        |r| r.get(0),
     )?;
+
+    let mut sql = format!(
+        "SELECT id, query, indexer, timestamp, result_count, results_json IS NOT NULL 
+         FROM search_logs 
+         {} 
+         ORDER BY timestamp DESC",
+        where_clause
+    );
+
+    if limit > 0 {
+        sql.push_str(" LIMIT ?");
+        params_vec.push(rusqlite::types::Value::Integer(limit as i64));
+        if offset > 0 {
+            sql.push_str(" OFFSET ?");
+            params_vec.push(rusqlite::types::Value::Integer(offset as i64));
+        }
+    } else if offset > 0 {
+        // SQLite requires a LIMIT if OFFSET is used. LIMIT -1 means no limit.
+        sql.push_str(" LIMIT -1 OFFSET ?");
+        params_vec.push(rusqlite::types::Value::Integer(offset as i64));
+    }
+
+    let mut stmt = conn.prepare(&sql)?;
     let logs = stmt
-        .query_map([limit], |row| {
+        .query_map(rusqlite::params_from_iter(params_vec), |row| {
             Ok(SearchLog {
                 id: row.get(0)?,
                 query: row.get(1)?,
@@ -126,7 +168,7 @@ pub fn get_recent_logs(pool: &DbPool, limit: usize) -> anyhow::Result<Vec<Search
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(logs)
+    Ok((logs, total_count as usize))
 }
 
 /// Get search results JSON by search log ID

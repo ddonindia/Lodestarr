@@ -29,6 +29,19 @@ pub(super) struct StatsResponse {
     recent_searches: Vec<SearchLog>,
 }
 
+#[derive(Serialize)]
+pub(super) struct HistoryResponse {
+    results: Vec<SearchLog>,
+    total: usize,
+}
+
+#[derive(serde::Deserialize)]
+pub(super) struct HistoryParams {
+    q: Option<String>,
+    limit: Option<usize>,
+    offset: Option<usize>,
+}
+
 /// Get application info (name, version)
 pub(super) async fn api_info() -> Json<serde_json::Value> {
     Json(serde_json::json!({
@@ -68,7 +81,8 @@ pub(super) async fn get_stats(State(state): State<AppState>) -> Json<StatsRespon
     let total_searches = crate::db::get_total_searches(&state.db_pool).unwrap_or(0);
     let avg_search_time_ms = crate::db::get_avg_duration(&state.db_pool).unwrap_or(0.0);
 
-    let recent_db = crate::db::get_recent_logs(&state.db_pool, 20).unwrap_or_default();
+    let (recent_db, _) =
+        crate::db::get_recent_logs(&state.db_pool, None, 20, 0).unwrap_or_default();
     let recent = recent_db
         .into_iter()
         .map(|l| SearchLog {
@@ -95,9 +109,19 @@ pub(super) async fn get_stats(State(state): State<AppState>) -> Json<StatsRespon
 }
 
 /// Get list of recent searches (persistent, from search_logs)
-pub(super) async fn get_history(State(state): State<AppState>) -> Json<Vec<SearchLog>> {
-    let recent = crate::db::get_recent_logs(&state.db_pool, 50).unwrap_or_default();
-    let response = recent
+pub(super) async fn get_history(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<HistoryParams>,
+) -> Json<HistoryResponse> {
+    let (recent, total) = crate::db::get_recent_logs(
+        &state.db_pool,
+        params.q,
+        params.limit.unwrap_or(50),
+        params.offset.unwrap_or(0),
+    )
+    .unwrap_or_default();
+
+    let results = recent
         .into_iter()
         .map(|l| SearchLog {
             id: l.id,
@@ -108,7 +132,8 @@ pub(super) async fn get_history(State(state): State<AppState>) -> Json<Vec<Searc
             has_results: l.has_results,
         })
         .collect();
-    Json(response)
+
+    Json(HistoryResponse { results, total })
 }
 
 /// Get cached results by search log ID
