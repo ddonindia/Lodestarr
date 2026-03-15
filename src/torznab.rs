@@ -325,6 +325,8 @@ impl TorznabClient {
             let grabs = extract_attr(item_text, "grabs").and_then(|s| s.parse().ok());
             let infohash = extract_attr(item_text, "infohash");
             let magneturl = extract_attr(item_text, "magneturl");
+            let poster =
+                extract_attr(item_text, "poster").or_else(|| extract_attr(item_text, "cover"));
 
             // Extract categories
             let mut categories = Vec::new();
@@ -371,6 +373,7 @@ impl TorznabClient {
                     download_volume_factor: None,
                     upload_volume_factor: None,
                     indexer: None,
+                    poster,
                     ..Default::default()
                 });
             }

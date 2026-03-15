@@ -10,7 +10,9 @@ import {
     getResultDate,
     getResultMagnet,
     getResultIndexerId,
-    getProxiedDownloadUrl
+    getProxiedDownloadUrl,
+    getResultPoster,
+    getResultCategory
 } from '../types';
 import { formatSize, formatDate } from '../utils/formatters';
 import { buttonSecondaryStyle } from '../styles/shared';
@@ -28,7 +30,7 @@ interface SearchResultsTableProps {
     downloadingId?: string | null;
     variant?: 'full' | 'simple'; // 'full' allows sorting columns, 'simple' is for basic display
     clients?: { id: string; name: string }[];
-    onSendToClient?: (clientId: string, magnet: string, title: string) => void;
+    onSendToClient?: (clientId: string, magnet: string, title: string, poster?: string, category?: string) => void;
     downloadedLinks?: Set<string>;
 }
 
@@ -226,7 +228,7 @@ export default function SearchResultsTable({
                                                     <div className="relative group/client">
                                                         {clients.length === 1 ? (
                                                             <button
-                                                                onClick={() => onSendToClient(clients[0].id, proxiedDownloadUrl, title)}
+                                                                onClick={() => onSendToClient(clients[0].id, proxiedDownloadUrl, title, getResultPoster(result), getResultCategory(result))}
                                                                 className="p-2 rounded-md hover:bg-neutral-700 transition-colors"
                                                                 title={`Send to ${clients[0].name}`}
                                                                 style={buttonSecondaryStyle}
@@ -250,7 +252,7 @@ export default function SearchResultsTable({
                                                                     className="absolute inset-0 opacity-0 cursor-pointer"
                                                                     onChange={(e) => {
                                                                         if (e.target.value) {
-                                                                            onSendToClient(e.target.value, proxiedDownloadUrl, title);
+                                                                            onSendToClient(e.target.value, proxiedDownloadUrl, title, getResultPoster(result), getResultCategory(result));
                                                                             e.target.value = '';
                                                                         }
                                                                     }}

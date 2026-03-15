@@ -8,11 +8,20 @@ use qbittorrent::QBittorrentClient;
 use reqwest::Client;
 use serde::Serialize;
 
+/// Options for downloading a torrent
+#[derive(Debug, Serialize, Default)]
+pub struct DownloadOptions {
+    pub title: Option<String>,
+    pub poster: Option<String>,
+    pub category: Option<String>,
+    pub save_to_db: bool,
+}
+
 /// Trait for download clients
 #[async_trait::async_trait]
 pub trait Downloader: Send + Sync {
     /// Add torrent by magnet link or URL
-    async fn add_torrent(&self, link: &str) -> Result<()>;
+    async fn add_torrent(&self, link: &str, options: DownloadOptions) -> Result<()>;
 
     /// Check connectivity
     async fn test_connection(&self) -> Result<()>;
@@ -52,16 +61,27 @@ impl TorrServerClient {
 struct TorrServerAddRequest {
     action: String,
     link: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    poster: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    category: Option<String>,
+    save_to_db: bool,
 }
 
 #[async_trait::async_trait]
 impl Downloader for TorrServerClient {
-    async fn add_torrent(&self, link: &str) -> Result<()> {
+    async fn add_torrent(&self, link: &str, options: DownloadOptions) -> Result<()> {
         let url = format!("{}/torrents", self.url);
 
         let req = TorrServerAddRequest {
             action: "add".to_string(),
             link: link.to_string(),
+            title: options.title,
+            poster: options.poster,
+            category: options.category,
+            save_to_db: options.save_to_db,
         };
 
         let resp = self

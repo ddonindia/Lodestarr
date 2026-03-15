@@ -4,7 +4,6 @@ use qbit_rs::{
     Qbit,
     model::{AddTorrentArg, Credential, TorrentSource},
 };
-use reqwest::Url;
 use std::sync::Arc;
 
 pub struct QBittorrentClient {
@@ -35,15 +34,23 @@ impl QBittorrentClient {
 
 #[async_trait::async_trait]
 impl Downloader for QBittorrentClient {
-    async fn add_torrent(&self, link: &str) -> Result<()> {
+    async fn add_torrent(
+        &self,
+        link: &str,
+        _options: crate::clients::DownloadOptions,
+    ) -> Result<()> {
         self.ensure_login().await?;
 
-        let url = Url::parse(link).context("Invalid torrent URL")?;
-        let arg = AddTorrentArg::builder()
-            .source(TorrentSource::Urls {
-                urls: vec![url].into(),
-            }) // Assuming Into<Sep> works
-            .build();
+        let url = reqwest::Url::parse(link).context("Invalid torrent URL")?;
+        let builder = AddTorrentArg::builder().source(TorrentSource::Urls {
+            urls: vec![url].into(),
+        });
+
+        let arg = if let Some(cat) = _options.category {
+            builder.category(cat).build()
+        } else {
+            builder.build()
+        };
 
         self.qbit
             .add_torrent(arg)

@@ -87,13 +87,14 @@ pub(super) async fn search_api(
     if let Ok(Some(cached)) = crate::db::get_cached_results(&state.db_pool, &cache_key)
         && let Ok(results) = serde_json::from_str::<Vec<TorrentResult>>(&cached)
     {
-        // Log cached search
-        let _ = crate::db::log_search(
+        // Log cached search with the results JSON so it's available in history
+        let _ = crate::db::log_search_with_results(
             &state.db_pool,
             &params.q,
             target,
             results.len(),
             start.elapsed().as_millis(),
+            Some(&cached),
         );
         return Json(results).into_response();
     }

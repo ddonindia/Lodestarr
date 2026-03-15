@@ -13,7 +13,9 @@ import {
     getResultLink,
     getResultDetails,
     getResultIndexerId,
-    getProxiedDownloadUrl
+    getProxiedDownloadUrl,
+    getResultPoster,
+    getResultCategory
 } from '../types';
 import { formatSize } from '../utils/formatters';
 
@@ -30,7 +32,7 @@ interface ResultDetailsModalProps {
 
     // Optional props for Send to Client and Download to Server
     clients?: { id: string; name: string }[];
-    onSendToClient?: (clientId: string, magnet: string, title: string) => void;
+    onSendToClient?: (clientId: string, magnet: string, title: string, poster?: string, category?: string) => void;
     downloadConfigured?: boolean;
     onDownload?: (link: string, title: string) => void;
     downloadingId?: string | null;
@@ -305,7 +307,7 @@ export default function ResultDetailsModal({
                                 {/* Send to Client - Single client */}
                                 {clients.length === 1 && onSendToClient && (magnet || link) && (
                                     <button
-                                        onClick={() => onSendToClient(clients[0].id, proxiedDownloadUrl, title)}
+                                        onClick={() => onSendToClient(clients[0].id, proxiedDownloadUrl, title, getResultPoster(result), getResultCategory(result))}
                                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
                                     >
                                         <Send className="w-4 h-4" />
@@ -321,7 +323,7 @@ export default function ResultDetailsModal({
                                             style={{ backgroundColor: '#059669' }}
                                             onChange={(e) => {
                                                 if (e.target.value) {
-                                                    onSendToClient(e.target.value, proxiedDownloadUrl, title);
+                                                    onSendToClient(e.target.value, proxiedDownloadUrl, title, getResultPoster(result), getResultCategory(result));
                                                     e.target.value = '';
                                                 }
                                             }}

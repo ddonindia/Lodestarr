@@ -41,6 +41,9 @@ export interface TorrentResult {
 
     InfoHash?: string;
     info_hash?: string;
+    Poster?: string;
+    poster?: string;
+    category?: string; // TorrServer category (e.g. "tv", "movie")
 }
 
 // Helper to normalize result access
@@ -57,6 +60,8 @@ export function getResultGuid(r: TorrentResult): string { return r.Guid || r.gui
 export function getResultDetails(r: TorrentResult): string | null { return r.Comments || r.comments || null; }
 export function getResultInfoHash(r: TorrentResult): string | undefined { return r.InfoHash || r.info_hash; }
 export function getResultIndexerId(r: TorrentResult): string | null { return r.IndexerId || r.indexer_id || null; }
+export function getResultPoster(r: TorrentResult): string | undefined { return r.poster || r.Poster; }
+export function getResultCategory(r: TorrentResult): string | undefined { return r.category; }
 
 export function getProxiedDownloadUrl(link: string | null | undefined, magnet: string | null | undefined, indexerId: string | null | undefined): string {
     const targetUrl = magnet || link || '';

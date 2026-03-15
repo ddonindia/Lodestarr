@@ -94,6 +94,8 @@ pub async fn remove_client(
 pub struct SendToClientRequest {
     pub magnet: String,
     pub title: Option<String>,
+    pub poster: Option<String>,
+    pub category: Option<String>,
 }
 
 /// Send magnet link to a specific client
@@ -112,19 +114,48 @@ pub async fn send_to_client(
 
     let downloader = create_client(client_config);
 
-    downloader.add_torrent(&req.magnet).await.map_err(|e| {
-        (
-            StatusCode::BAD_GATEWAY,
-            format!("Failed to send to client: {}", e),
-        )
-    })?;
+    if req.magnet.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Magnet link is required".to_string(),
+        ));
+    }
+
+    let title = req
+        .title
+        .clone()
+        .or_else(|| {
+            // Try to extract from magnet dn parameter reliably
+            req.magnet.split(['?', '&']).find_map(|bit| {
+                bit.strip_prefix("dn=")
+                    .and_then(|dn| urlencoding::decode(dn).ok().map(|s| s.into_owned()))
+            })
+        })
+        .unwrap_or_else(|| "Torrent".to_string());
+
+    let options = crate::clients::DownloadOptions {
+        title: Some(title.clone()),
+        poster: req.poster.clone(),
+        category: req.category.clone(),
+        save_to_db: true,
+    };
+
+    downloader
+        .add_torrent(&req.magnet, options)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                format!("Failed to send to client: {}", e),
+            )
+        })?;
 
     // Log the download to the database
     let client_name = client_config.name.clone();
     drop(config); // Release the read lock before DB operation
     if let Err(e) = crate::db::log_download(
         &state.db_pool,
-        req.title.as_deref(),
+        Some(&title),
         Some(&req.magnet),
         None,
         Some(&client_name),

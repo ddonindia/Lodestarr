@@ -8,7 +8,7 @@ interface DownloadClient {
 
 interface UseDownloadClientsReturn {
     clients: DownloadClient[];
-    handleSendToClient: (clientId: string, magnet: string, title: string) => Promise<void>;
+    handleSendToClient: (clientId: string, magnet: string, title: string, poster?: string, category?: string) => Promise<void>;
     downloadConfigured: boolean;
     downloading: string | null;
     handleServerDownload: (link: string, title: string) => Promise<void>;
@@ -58,14 +58,14 @@ export function useDownloadClients(): UseDownloadClientsReturn {
     }, [refreshDownloadedLinks]);
 
     // Send torrent to a download client
-    const handleSendToClient = useCallback(async (clientId: string, magnet: string, title: string) => {
+    const handleSendToClient = useCallback(async (clientId: string, magnet: string, title: string, poster?: string, category?: string) => {
         if (!magnet) return;
         const toastId = toast.loading(`Sending "${title}"...`);
         try {
             const res = await fetch(`/api/clients/${clientId}/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ magnet, title })
+                body: JSON.stringify({ magnet, title, poster, category })
             });
 
             if (res.ok) {
