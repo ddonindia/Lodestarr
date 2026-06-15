@@ -217,7 +217,7 @@ pub(super) async fn clear_all(State(state): State<AppState>) -> impl IntoRespons
     if let Ok(n) = crate::db::clear_download_logs(&state.db_pool) {
         cleared.push(format!("{} downloads", n));
     }
-    if let Ok(n) = crate::db::clear_cache(&state.db_pool) {
+    if let Ok(n) = crate::db::clear_all_cache(&state.db_pool) {
         cleared.push(format!("{} cached searches", n));
     }
 

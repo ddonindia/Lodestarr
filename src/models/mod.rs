@@ -1,4 +1,4 @@
-//! Core data models for Ferracket
+//! Core data models for Lodestarr
 
 mod category;
 mod search;

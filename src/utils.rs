@@ -1,3 +1,6 @@
+/// User-Agent string for HTTP requests, auto-derived from Cargo.toml version
+pub const USER_AGENT: &str = concat!("Lodestarr/", env!("CARGO_PKG_VERSION"));
+
 /// Format bytes into human readable string
 pub fn format_size(bytes: u64) -> String {
     const KB: u64 = 1024;

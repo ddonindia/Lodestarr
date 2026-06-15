@@ -68,7 +68,7 @@ impl TorznabClient {
         let base_url = Url::parse(base_url)?;
 
         let mut builder = Client::builder()
-            .user_agent("torznab-cli/0.1.0")
+            .user_agent(crate::utils::USER_AGENT)
             .cookie_store(true)
             .timeout(std::time::Duration::from_secs(30));
 

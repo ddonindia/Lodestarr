@@ -33,6 +33,14 @@ pub(super) async fn add_indexer_api(
     State(state): State<AppState>,
     Json(payload): Json<AddIndexerParams>,
 ) -> impl IntoResponse {
+    // Validate URL format
+    if url::Url::parse(&payload.url).is_err() {
+        return (StatusCode::BAD_REQUEST, "Invalid URL format").into_response();
+    }
+    // Validate name is not empty
+    if payload.name.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, "Name cannot be empty").into_response();
+    }
     let mut config = state.config.write().await;
     config.add_indexer(payload.name, payload.url, payload.apikey);
     if let Err((status, msg)) = save_config_or_error(&config) {
@@ -46,6 +54,13 @@ pub(super) async fn edit_indexer_api(
     Path(original_name): Path<String>,
     Json(payload): Json<AddIndexerParams>,
 ) -> impl IntoResponse {
+    // Validate URL format
+    if url::Url::parse(&payload.url).is_err() {
+        return (StatusCode::BAD_REQUEST, "Invalid URL format").into_response();
+    }
+    if payload.name.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, "Name cannot be empty").into_response();
+    }
     let mut config = state.config.write().await;
 
     // Check if renaming and new name already exists (and isn't self)

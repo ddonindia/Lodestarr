@@ -39,7 +39,7 @@ impl SearchExecutor {
             .unwrap_or(30);
 
         let client_builder = Client::builder()
-            .user_agent("Lodestarr/0.4.2")
+            .user_agent(crate::utils::USER_AGENT)
             .cookie_store(true)
             .timeout(std::time::Duration::from_secs(timeout_secs));
 

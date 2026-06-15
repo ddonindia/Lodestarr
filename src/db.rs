@@ -7,11 +7,11 @@ use std::path::Path;
 
 pub type DbPool = Pool<SqliteConnectionManager>;
 
-pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
+pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbPool> {
     let manager = SqliteConnectionManager::file(path);
-    let pool = Pool::new(manager).expect("Failed to create pool.");
+    let pool = Pool::new(manager)?;
 
-    let conn = pool.get().expect("Failed to get connection.");
+    let conn = pool.get()?;
     conn.execute(
         "CREATE TABLE IF NOT EXISTS search_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,8 +22,7 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
             duration_ms INTEGER NOT NULL
         )",
         [],
-    )
-    .expect("Failed to create search_logs table");
+    )?;
 
     // Migration: add results_json column if it doesn't exist
     conn.execute("ALTER TABLE search_logs ADD COLUMN results_json TEXT", [])
@@ -36,8 +35,7 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
             expires_at DATETIME NOT NULL
         )",
         [],
-    )
-    .expect("Failed to create search_cache table");
+    )?;
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS download_logs (
@@ -50,8 +48,7 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
             timestamp DATETIME NOT NULL
         )",
         [],
-    )
-    .expect("Failed to create download_logs table");
+    )?;
 
     // Indexes
     conn.execute(
@@ -70,7 +67,7 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> DbPool {
     )
     .ok();
 
-    pool
+    Ok(pool)
 }
 
 pub fn log_search(
@@ -246,12 +243,7 @@ pub fn clear_search_logs(pool: &DbPool) -> anyhow::Result<usize> {
     Ok(deleted)
 }
 
-/// Clear all cached searches
-pub fn clear_cache(pool: &DbPool) -> anyhow::Result<usize> {
-    let conn = pool.get()?;
-    let deleted = conn.execute("DELETE FROM search_cache", [])?;
-    Ok(deleted)
-}
+
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SearchLog {

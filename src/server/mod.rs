@@ -22,6 +22,7 @@ use axum::{
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::sync::RwLock;
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 // Handlers are used directly via module paths (e.g., api_info::api_info)
@@ -108,7 +109,7 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
             .collect()
     };
 
-    let db_pool = crate::db::init_db(db_path);
+    let db_pool = crate::db::init_db(db_path)?;
 
     // Clean up expired cache entries at startup
     if let Err(e) = crate::db::cleanup_cache(&db_pool) {
@@ -220,10 +221,11 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
         )
         .with_state(state)
         .fallback(static_handler)
+        .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
         .layer(TraceLayer::new_for_http());
 
     let addr = format!("{}:{}", host, port);
-    println!("Web UI running at http://{}", addr);
+    tracing::info!("Web UI running at http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app)

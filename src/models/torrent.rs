@@ -114,36 +114,4 @@ pub struct TorrentResult {
     pub poster: Option<String>,
 }
 
-impl TorrentResult {
-    /// Create a new torrent result with minimal required fields
-    pub fn new(title: String, guid: String) -> Self {
-        Self {
-            title,
-            guid,
-            link: None,
-            details: None,
-            magnet: None,
-            publish_date: None,
-            categories: Vec::new(),
-            size: None,
-            files: None,
-            grabs: None,
-            seeders: None,
-            leechers: None,
-            info_hash: None,
-            imdb_id: None,
-            tmdb_id: None,
-            tvdb_id: None,
-            uploader: None,
-            minimum_ratio: None,
-            minimum_seedtime: None,
-            download_volume_factor: None,
-            upload_volume_factor: None,
-            indexer: None,
-            flags: Vec::new(),
-            description: None,
-            genre: None,
-            poster: None,
-        }
-    }
-}
+

@@ -832,7 +832,11 @@ async fn handle_search_command(
                     index: i + 1,
                     indexer: r.indexer.clone().unwrap_or_default(),
                     title: if r.title.len() > 50 {
-                        format!("{}...", &r.title[..47])
+                        let truncated: String = r.title.char_indices()
+                            .take_while(|&(i, _)| i < 47)
+                            .map(|(_, c)| c)
+                            .collect();
+                        format!("{}...", truncated)
                     } else {
                         r.title.clone()
                     },

@@ -1,8 +1,8 @@
-//! Error types for Ferracket
+//! Error types for Lodestarr
 
 use thiserror::Error;
 
-/// Main error type for Ferracket
+/// Main error type for Lodestarr
 #[derive(Error, Debug)]
 #[allow(dead_code)]
 pub enum Error {
@@ -43,6 +43,6 @@ pub enum Error {
     SearchFailed(String),
 }
 
-/// Result type alias for Ferracket operations
+/// Result type alias for Lodestarr operations
 #[allow(dead_code)]
 pub type Result<T> = std::result::Result<T, Error>;
