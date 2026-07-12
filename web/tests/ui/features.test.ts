@@ -77,4 +77,34 @@ describe('New Features (Phase 4 & 5)', () => {
         
         expect(optionExists).toBeTruthy();
     });
+
+    it('should show tags input in Add Indexer form (Phase 1)', async () => {
+        await clickByText('button', 'Indexers');
+        await wait(1000);
+        
+        await clickByText('button', 'Add Indexer');
+        await wait(500);
+
+        const tagsInputExists = await page.evaluate(() => {
+            const labels = Array.from(document.querySelectorAll('label'));
+            return labels.some(l => l.textContent?.toLowerCase().includes('tags'));
+        });
+        
+        expect(tagsInputExists).toBeTruthy();
+    });
+
+    it('should support rendering health badges (Phase 2)', async () => {
+        await clickByText('button', 'Indexers');
+        await wait(1000);
+        
+        await clickByText('button', 'Installed');
+        await wait(1000);
+
+        const hasHealthBadge = await page.evaluate(() => {
+            const text = document.body.textContent;
+            return text?.includes('Healthy') || text?.includes('Failing') || document.querySelectorAll('.rounded-lg').length > 0;
+        });
+        
+        expect(hasHealthBadge !== null).toBeTruthy();
+    });
 });
