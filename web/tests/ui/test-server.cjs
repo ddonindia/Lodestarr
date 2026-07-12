@@ -34,7 +34,7 @@ async function startServer() {
 
     // Start server
     const server = spawn(binaryPath, ['serve', '--port', port.toString()], {
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: 'ignore',
         detached: true
     });
 

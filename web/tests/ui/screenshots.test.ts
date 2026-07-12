@@ -129,13 +129,54 @@ describe('Demo Screenshots', () => {
             await wait(1000);
         }
 
+        // 5a. Navigate to Logs
+        const logNavButtons = await page.$$('button');
+        for (const button of logNavButtons) {
+            if ((await page.evaluate(el => el.textContent, button))?.includes('Logs')) {
+                await button.click();
+                break;
+            }
+        }
+        await wait(1000);
+        await page.screenshot({ path: path.join(screenshotDir, '06-logs-view.png'), fullPage: true });
+
+        // 5b. Navigate to Settings -> Data
+        const setNavButtons = await page.$$('button');
+        for (const button of setNavButtons) {
+            if ((await page.evaluate(el => el.textContent, button))?.includes('Settings')) {
+                await button.click();
+                break;
+            }
+        }
+        await wait(500);
+        const dataTabs = await page.$$('button');
+        for (const tab of dataTabs) {
+            if ((await page.evaluate(el => el.textContent, tab))?.includes('Data')) {
+                await tab.click();
+                break;
+            }
+        }
+        await wait(500);
+        await page.screenshot({ path: path.join(screenshotDir, '07-settings-data-view.png'), fullPage: true });
+
+        // 5c. Navigate to Settings -> Download Clients
+        const dlTabs = await page.$$('button');
+        for (const tab of dlTabs) {
+            if ((await page.evaluate(el => el.textContent, tab))?.includes('Download Clients')) {
+                await tab.click();
+                break;
+            }
+        }
+        await wait(500);
+        await page.screenshot({ path: path.join(screenshotDir, '08-settings-clients-view.png'), fullPage: true });
+
         // 6. Navigate back to Dashboard
         const logoContainer = await page.$('div.flex.items-center.gap-3.cursor-pointer');
         if (logoContainer) {
             await logoContainer.click();
             await wait(500);
             await page.screenshot({
-                path: path.join(screenshotDir, '06-dashboard-dark.png'),
+                path: path.join(screenshotDir, '09-dashboard-dark.png'),
                 fullPage: true
             });
         }
@@ -144,7 +185,7 @@ describe('Demo Screenshots', () => {
         await page.setViewport({ width: 768, height: 1024 });
         await wait(500);
         await page.screenshot({
-            path: path.join(screenshotDir, '07-tablet-view.png'),
+            path: path.join(screenshotDir, '10-tablet-view.png'),
             fullPage: true
         });
 
@@ -152,7 +193,7 @@ describe('Demo Screenshots', () => {
         await page.setViewport({ width: 375, height: 667 });
         await wait(500);
         await page.screenshot({
-            path: path.join(screenshotDir, '08-mobile-view.png'),
+            path: path.join(screenshotDir, '11-mobile-view.png'),
             fullPage: true
         });
 
