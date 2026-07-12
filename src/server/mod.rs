@@ -11,6 +11,7 @@ mod api_indexers;
 mod api_info;
 mod api_native;
 mod api_settings;
+mod indexer_filter;
 mod static_files;
 
 use crate::config::Config;

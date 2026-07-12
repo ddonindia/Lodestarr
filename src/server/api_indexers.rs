@@ -361,9 +361,19 @@ pub(super) async fn torznab_api(
         .unwrap_or("localhost:3420");
     let proxy_base_url = format!("http://{}", host);
 
-    // Handle "all" aggregate indexer
-    if indexer == "all" {
-        return torznab_all_indexers(state, params, &proxy_base_url).await;
+    use crate::server::indexer_filter::FilterExpr;
+
+    let filter = FilterExpr::parse(&indexer);
+
+    // Handle "all" aggregate indexer, or a complex filter
+    match filter {
+        FilterExpr::Exact(ref exact_name) => {
+            // We'll fall through to exact matching logic
+            let _ = exact_name; // just to ignore unused warning if we don't use it directly below
+        }
+        _ => {
+            return torznab_all_indexers(state, params, &proxy_base_url, filter).await;
+        }
     }
 
     // Get native indexer manager
@@ -493,6 +503,7 @@ async fn torznab_all_indexers(
     state: AppState,
     params: TorznabParams,
     proxy_base_url: &str,
+    filter: crate::server::indexer_filter::FilterExpr,
 ) -> axum::response::Response {
     let start = std::time::Instant::now();
     let action = params.t.as_deref().unwrap_or("search");
@@ -589,9 +600,42 @@ async fn torznab_all_indexers(
 
             // Native indexers
             let definitions = manager.list_all_definitions().await;
+
+            let health_records = crate::db::get_indexer_health(&state.db_pool).unwrap_or_default();
+            let mut health_map = std::collections::HashMap::new();
+            for h in health_records {
+                health_map.insert(h.indexer_id.clone(), h.is_healthy);
+            }
+
             for def in definitions {
                 // Check if native indexer is enabled
                 if !config.is_enabled(&def.id) {
+                    continue;
+                }
+
+                let tags = config
+                    .native_settings
+                    .get(&def.id)
+                    .and_then(|settings| settings.get("_tags"))
+                    .map(|tags_str| {
+                        tags_str
+                            .split(',')
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty())
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+
+                let info = crate::server::indexer_filter::IndexerInfo {
+                    id: &def.id,
+                    name: &def.name,
+                    indexer_type: &def.indexer_type,
+                    tags: &tags,
+                    language: &def.language,
+                    is_healthy: health_map.get(&def.id).copied(),
+                };
+
+                if !filter.matches(&info) {
                     continue;
                 }
 
@@ -622,6 +666,19 @@ async fn torznab_all_indexers(
             // Proxied indexers
             for idx in &config.indexers {
                 if !config.is_enabled(&idx.name) {
+                    continue;
+                }
+
+                let info = crate::server::indexer_filter::IndexerInfo {
+                    id: &idx.name,
+                    name: &idx.name,
+                    indexer_type: "proxy",
+                    tags: &idx.tags,
+                    language: "en-US", // Defaults for proxied
+                    is_healthy: health_map.get(&idx.name).copied(),
+                };
+
+                if !filter.matches(&info) {
                     continue;
                 }
 
