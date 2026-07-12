@@ -188,7 +188,11 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
         )
         .route(
             "/api/settings/proxy",
-            axum::routing::get(get_proxy_config).post(save_proxy_config),
+            axum::routing::get(api_settings::get_proxy_config).post(api_settings::save_proxy_config),
+        )
+        .route(
+            "/api/settings/cache_ttl",
+            axum::routing::get(api_settings::get_cache_ttl).post(api_settings::save_cache_ttl),
         )
         .route(
             "/api/settings/indexer/{name}/status",

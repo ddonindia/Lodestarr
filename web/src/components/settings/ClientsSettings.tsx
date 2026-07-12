@@ -85,6 +85,9 @@ export default function ClientsSettings() {
         } else if (newType === 'QBittorrent') {
             setNewName('qBittorrent');
             setNewUrl('http://localhost:8080');
+        } else if (newType === 'Blackhole') {
+            setNewName('Blackhole');
+            setNewUrl('/downloads');
         }
     }, [newType]);
 
@@ -177,17 +180,20 @@ export default function ClientsSettings() {
                             >
                                 <option value="TorrServer">TorrServer</option>
                                 <option value="QBittorrent">qBittorrent</option>
+                                <option value="Blackhole">Blackhole (Watch Folder)</option>
                             </select>
                         </div>
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-neutral-400 mb-1">URL</label>
+                            <label className="block text-xs font-medium text-neutral-400 mb-1">
+                                {newType === 'Blackhole' ? 'Directory Path' : 'URL'}
+                            </label>
                             <input
-                                type="url"
+                                type={newType === 'Blackhole' ? 'text' : 'url'}
                                 required
                                 value={newUrl}
                                 onChange={e => setNewUrl(e.target.value)}
                                 className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
-                                placeholder="http://localhost:8080"
+                                placeholder={newType === 'Blackhole' ? '/downloads/watch' : 'http://localhost:8080'}
                             />
                         </div>
 

@@ -446,9 +446,15 @@ pub(super) async fn search_native(
         serialized.as_deref(),
     );
 
-    // Cache results (for quick re-fetch within TTL)
+    // Cache results
     if let Some(ref json) = serialized {
-        let _ = crate::db::set_cached_results(&state.db_pool, &cache_key, json, 1);
+        let config = state.config.read().await;
+        let _ = crate::db::set_cached_results(
+            &state.db_pool,
+            &cache_key,
+            json,
+            config.cache_ttl_minutes as i64,
+        );
     }
 
     Json(all_results).into_response()

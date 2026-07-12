@@ -176,6 +176,8 @@ pub(super) async fn search_api(
 
     // Record stat
     let duration = start.elapsed();
+    let config = state.config.read().await;
+    let ttl_minutes = config.cache_ttl_minutes as i64;
     log_search_helper(
         &state.db_pool,
         &params.q,
@@ -183,6 +185,7 @@ pub(super) async fn search_api(
         &all_results,
         duration,
         Some(&cache_key),
+        ttl_minutes,
     );
 
     // Sort by seeders
@@ -464,6 +467,7 @@ pub(super) async fn torznab_api(
                         &results,
                         start.elapsed(),
                         None,
+                        0,
                     );
 
                     (
@@ -742,6 +746,7 @@ async fn torznab_all_indexers(
                 &all_results,
                 start.elapsed(),
                 None,
+                0,
             );
 
             (
@@ -960,6 +965,7 @@ fn log_search_helper(
     results: &[TorrentResult],
     duration: std::time::Duration,
     cache_key: Option<&str>,
+    ttl_minutes: i64,
 ) {
     let serialized = serde_json::to_string(results).ok();
 
@@ -977,6 +983,6 @@ fn log_search_helper(
     if let Some(key) = cache_key
         && let Some(ref json) = serialized
     {
-        let _ = crate::db::set_cached_results(pool, key, json, 1);
+        let _ = crate::db::set_cached_results(pool, key, json, ttl_minutes);
     }
 }

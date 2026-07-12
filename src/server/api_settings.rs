@@ -125,6 +125,28 @@ pub(super) async fn get_proxy_config(State(state): State<AppState>) -> Json<serd
     Json(serde_json::json!({ "proxy_url": config.proxy_url }))
 }
 
+pub(super) async fn get_cache_ttl(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let config = state.config.read().await;
+    Json(serde_json::json!({ "cache_ttl_minutes": config.cache_ttl_minutes }))
+}
+
+#[derive(Deserialize)]
+pub(super) struct CacheTtlParams {
+    cache_ttl_minutes: u32,
+}
+
+pub(super) async fn save_cache_ttl(
+    State(state): State<AppState>,
+    Json(payload): Json<CacheTtlParams>,
+) -> impl IntoResponse {
+    let mut config = state.config.write().await;
+    config.cache_ttl_minutes = payload.cache_ttl_minutes;
+    if let Err((status, msg)) = save_config_or_error(&config) {
+        return (status, msg).into_response();
+    }
+    (StatusCode::OK, "Cache TTL saved").into_response()
+}
+
 #[derive(Deserialize)]
 pub(super) struct ProxyConfigParams {
     proxy_url: Option<String>,

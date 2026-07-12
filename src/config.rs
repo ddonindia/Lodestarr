@@ -22,6 +22,14 @@ pub struct Config {
     /// Configured download clients
     #[serde(default)]
     pub download_clients: Vec<DownloadClient>,
+
+    /// Cache TTL in minutes (default: 60)
+    #[serde(default = "default_cache_ttl")]
+    pub cache_ttl_minutes: u32,
+}
+
+fn default_cache_ttl() -> u32 {
+    60
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +45,7 @@ pub struct IndexerConfig {
 pub enum ClientType {
     TorrServer,
     QBittorrent,
+    Blackhole,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

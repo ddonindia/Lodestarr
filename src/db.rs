@@ -219,10 +219,10 @@ pub fn set_cached_results(
     pool: &DbPool,
     key: &str,
     results: &str,
-    ttl_hours: i64,
+    ttl_minutes: i64,
 ) -> anyhow::Result<()> {
     let conn = pool.get()?;
-    let expires_at = Utc::now() + chrono::Duration::hours(ttl_hours);
+    let expires_at = Utc::now() + chrono::Duration::minutes(ttl_minutes);
     conn.execute(
         "INSERT OR REPLACE INTO search_cache (key, results, expires_at) VALUES (?1, ?2, ?3)",
         params![key, results, expires_at],

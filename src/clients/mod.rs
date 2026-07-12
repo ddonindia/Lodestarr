@@ -1,5 +1,6 @@
 //! Download clients interface
 
+pub mod blackhole;
 pub mod qbittorrent;
 
 use crate::config::{ClientType, DownloadClient};
@@ -35,6 +36,10 @@ pub fn create_client(config: &DownloadClient) -> Box<dyn Downloader> {
             &config.url,
             config.username.clone(),
             config.password.clone(),
+        )),
+        ClientType::Blackhole => Box::new(blackhole::BlackholeDownloader::new(
+            &config.url,
+            true, // Default save magnets true
         )),
     }
 }

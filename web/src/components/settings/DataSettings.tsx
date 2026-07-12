@@ -1,10 +1,43 @@
-import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trash2, Clock } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardBody } from '../ui';
 import toast from 'react-hot-toast';
 
 export default function DataSettings() {
     const [clearing, setClearing] = useState(false);
+    const [cacheTtl, setCacheTtl] = useState(60);
+    const [savingTtl, setSavingTtl] = useState(false);
+
+    useEffect(() => {
+        fetch('/api/settings/cache_ttl')
+            .then(res => res.json())
+            .then(data => {
+                if (data.cache_ttl_minutes !== undefined) {
+                    setCacheTtl(data.cache_ttl_minutes);
+                }
+            })
+            .catch(() => { });
+    }, []);
+
+    const handleSaveCacheTtl = async () => {
+        setSavingTtl(true);
+        try {
+            const res = await fetch('/api/settings/cache_ttl', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cache_ttl_minutes: cacheTtl })
+            });
+            if (res.ok) {
+                toast.success('Cache TTL saved');
+            } else {
+                toast.error('Failed to save Cache TTL');
+            }
+        } catch {
+            toast.error('Failed to save Cache TTL');
+        } finally {
+            setSavingTtl(false);
+        }
+    };
 
     const handleClearAll = async () => {
         if (!confirm('Are you sure you want to clear all data? This will delete:\n• Search history & stats\n• Download history\n• Cached search results\n\nThis cannot be undone.')) {
@@ -91,6 +124,43 @@ export default function DataSettings() {
                             <Button variant="secondary" size="sm" onClick={handleClearDownloads}>
                                 Clear
                             </Button>
+                        </div>
+                    </div>
+                </CardBody>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Clock size={18} />
+                        Cache Settings
+                    </CardTitle>
+                </CardHeader>
+                <CardBody>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-white mb-1">
+                                Search Cache TTL (minutes)
+                            </label>
+                            <p className="text-sm text-neutral-400 mb-3">
+                                How long search results should be cached in the database. Set to 0 to disable caching entirely.
+                            </p>
+                            <div className="flex items-center gap-4">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={cacheTtl}
+                                    onChange={e => setCacheTtl(parseInt(e.target.value) || 0)}
+                                    className="w-32 bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-accent"
+                                />
+                                <Button
+                                    variant="primary"
+                                    onClick={handleSaveCacheTtl}
+                                    disabled={savingTtl}
+                                >
+                                    {savingTtl ? 'Saving...' : 'Save Cache TTL'}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </CardBody>
