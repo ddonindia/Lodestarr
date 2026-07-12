@@ -113,5 +113,3 @@ pub struct TorrentResult {
     #[serde(rename = "Poster", skip_serializing_if = "Option::is_none")]
     pub poster: Option<String>,
 }
-
-

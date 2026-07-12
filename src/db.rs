@@ -243,8 +243,6 @@ pub fn clear_search_logs(pool: &DbPool) -> anyhow::Result<usize> {
     Ok(deleted)
 }
 
-
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SearchLog {
     pub id: i64,

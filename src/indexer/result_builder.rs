@@ -29,7 +29,11 @@ pub fn make_torrent_result(
         .map(|d| make_absolute_url(d, base_url));
     let guid = details.clone().unwrap_or_else(|| title.clone());
 
-    let mut result = TorrentResult { title, guid, ..Default::default() };
+    let mut result = TorrentResult {
+        title,
+        guid,
+        ..Default::default()
+    };
     result.details = details;
     result.indexer = Some(definition.id.clone());
 

@@ -221,7 +221,12 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
         )
         .with_state(state)
         .fallback(static_handler)
-        .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        )
         .layer(TraceLayer::new_for_http());
 
     let addr = format!("{}:{}", host, port);

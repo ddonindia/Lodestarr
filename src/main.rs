@@ -292,6 +292,7 @@ async fn main() -> Result<()> {
             name: "CLI".to_string(),
             url,
             apikey: cli.apikey.clone(),
+            tags: vec![],
         })
     } else {
         None
@@ -475,7 +476,7 @@ async fn handle_indexer_command(command: IndexerCommands, config: &mut Config) -
             }
         }
         IndexerCommands::Add { name, url, apikey } => {
-            config.add_indexer(name.clone(), url, apikey);
+            config.add_indexer(name.clone(), url, apikey, vec![]);
             config.save()?;
             println!("{} Added indexer '{}'", "✓".green(), name);
         }
@@ -832,7 +833,9 @@ async fn handle_search_command(
                     index: i + 1,
                     indexer: r.indexer.clone().unwrap_or_default(),
                     title: if r.title.len() > 50 {
-                        let truncated: String = r.title.char_indices()
+                        let truncated: String = r
+                            .title
+                            .char_indices()
                             .take_while(|&(i, _)| i < 47)
                             .map(|(_, c)| c)
                             .collect();
