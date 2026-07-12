@@ -276,8 +276,15 @@ pub(super) async fn test_indexer_api(
     };
 
     match client.get_caps().await {
-        Ok(_) => (StatusCode::OK, "Connection successful").into_response(),
-        Err(e) => (StatusCode::BAD_GATEWAY, format!("Connection failed: {}", e)).into_response(),
+        Ok(_) => {
+            let _ = crate::db::set_indexer_health(&state.db_pool, &payload.name, true, None);
+            (StatusCode::OK, "Connection successful").into_response()
+        }
+        Err(e) => {
+            let msg = format!("Connection failed: {}", e);
+            let _ = crate::db::set_indexer_health(&state.db_pool, &payload.name, false, Some(&msg));
+            (StatusCode::BAD_GATEWAY, msg).into_response()
+        }
     }
 }
 

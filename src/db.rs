@@ -67,6 +67,16 @@ pub fn init_db<P: AsRef<Path>>(path: P) -> anyhow::Result<DbPool> {
     )
     .ok();
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS indexer_health (
+            indexer_id TEXT PRIMARY KEY,
+            is_healthy BOOLEAN NOT NULL,
+            last_tested DATETIME NOT NULL,
+            error_message TEXT
+        )",
+        [],
+    )?;
+
     Ok(pool)
 }
 
@@ -332,4 +342,48 @@ pub fn clear_download_logs(pool: &DbPool) -> anyhow::Result<usize> {
     let conn = pool.get()?;
     let deleted = conn.execute("DELETE FROM download_logs", [])?;
     Ok(deleted)
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct IndexerHealth {
+    pub indexer_id: String,
+    pub is_healthy: bool,
+    pub last_tested: DateTime<Utc>,
+    pub error_message: Option<String>,
+}
+
+pub fn get_indexer_health(pool: &DbPool) -> anyhow::Result<Vec<IndexerHealth>> {
+    let conn = pool.get()?;
+    let mut stmt = conn
+        .prepare("SELECT indexer_id, is_healthy, last_tested, error_message FROM indexer_health")?;
+    let healths = stmt
+        .query_map([], |row| {
+            Ok(IndexerHealth {
+                indexer_id: row.get(0)?,
+                is_healthy: row.get(1)?,
+                last_tested: row.get(2)?,
+                error_message: row.get(3)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(healths)
+}
+
+pub fn set_indexer_health(
+    pool: &DbPool,
+    indexer_id: &str,
+    is_healthy: bool,
+    error_message: Option<&str>,
+) -> anyhow::Result<()> {
+    let conn = pool.get()?;
+    conn.execute(
+        "INSERT INTO indexer_health (indexer_id, is_healthy, last_tested, error_message)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(indexer_id) DO UPDATE SET
+         is_healthy=excluded.is_healthy,
+         last_tested=excluded.last_tested,
+         error_message=excluded.error_message",
+        params![indexer_id, is_healthy, Utc::now(), error_message],
+    )?;
+    Ok(())
 }

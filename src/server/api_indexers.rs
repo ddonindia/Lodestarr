@@ -20,6 +20,7 @@ pub(super) struct IndexerDefinition {
     url: String,
     enabled: bool,
     tags: Vec<String>,
+    health: Option<crate::db::IndexerHealth>,
 }
 
 #[derive(Serialize)]
@@ -29,6 +30,12 @@ pub(super) struct IndexerListResponse {
 
 pub(super) async fn list_indexers(State(state): State<AppState>) -> Json<IndexerListResponse> {
     let config = state.config.read().await;
+    let health_records = crate::db::get_indexer_health(&state.db_pool).unwrap_or_default();
+    let health_map: std::collections::HashMap<_, _> = health_records
+        .into_iter()
+        .map(|h| (h.indexer_id.clone(), h))
+        .collect();
+
     let indexers = config
         .indexers
         .iter()
@@ -38,6 +45,7 @@ pub(super) async fn list_indexers(State(state): State<AppState>) -> Json<Indexer
             url: idx.url.clone(),
             enabled: config.is_enabled(&idx.name),
             tags: idx.tags.clone(),
+            health: health_map.get(&idx.name).cloned(),
         })
         .collect();
 

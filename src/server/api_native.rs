@@ -112,6 +112,7 @@ pub(super) struct LocalIndexerInfo {
     categories: Vec<i32>,
     enabled: bool,
     tags: Vec<String>,
+    health: Option<crate::db::IndexerHealth>,
 }
 
 #[derive(Serialize)]
@@ -126,6 +127,12 @@ pub(super) async fn list_local_indexers(
     let manager = state.native_indexers.read().await;
     let definitions = manager.list_all_definitions().await;
     let config = state.config.read().await;
+
+    let health_records = crate::db::get_indexer_health(&state.db_pool).unwrap_or_default();
+    let health_map: std::collections::HashMap<_, _> = health_records
+        .into_iter()
+        .map(|h| (h.indexer_id.clone(), h))
+        .collect();
 
     let indexers: Vec<LocalIndexerInfo> = definitions
         .iter()
@@ -151,6 +158,7 @@ pub(super) async fn list_local_indexers(
                         .collect()
                 })
                 .unwrap_or_default(),
+            health: health_map.get(&def.id).cloned(),
         })
         .collect();
 
@@ -553,14 +561,17 @@ pub(super) async fn test_native_indexer(
             let time_ms = start.elapsed().as_millis();
             let count = results.len();
             if count == 0 {
+                let msg = "No results found - indexer may be down or misconfigured";
+                let _ = crate::db::set_indexer_health(&state.db_pool, &id, false, Some(msg));
                 Json(TestResult {
                     success: false,
                     count: 0,
                     time_ms,
-                    message: "No results found - indexer may be down or misconfigured".to_string(),
+                    message: msg.to_string(),
                 })
                 .into_response()
             } else {
+                let _ = crate::db::set_indexer_health(&state.db_pool, &id, true, None);
                 Json(TestResult {
                     success: true,
                     count,
@@ -572,11 +583,13 @@ pub(super) async fn test_native_indexer(
         }
         Err(e) => {
             let time_ms = start.elapsed().as_millis();
+            let msg = format!("Test failed: {}", e);
+            let _ = crate::db::set_indexer_health(&state.db_pool, &id, false, Some(&msg));
             Json(TestResult {
                 success: false,
                 count: 0,
                 time_ms,
-                message: format!("Test failed: {}", e),
+                message: msg,
             })
             .into_response()
         }

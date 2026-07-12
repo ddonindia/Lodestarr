@@ -133,6 +133,17 @@ export default function InstalledIndexersTable({
                                     {!indexer.isNative && (
                                         <Badge variant="warning" size="sm">Proxy</Badge>
                                     )}
+                                    {indexer.health ? (
+                                        indexer.health.is_healthy ? (
+                                            <span title={`Tested: ${new Date(indexer.health.last_tested).toLocaleString()}`}>
+                                                <Badge variant="success" size="sm">Healthy</Badge>
+                                            </span>
+                                        ) : (
+                                            <span title={indexer.health.error_message || 'Failing'}>
+                                                <Badge variant="danger" size="sm">Failing</Badge>
+                                            </span>
+                                        )
+                                    ) : null}
                                     {indexer.tags?.map((tag: string) => (
                                         <span key={tag}>
                                             <Badge variant="neutral" size="sm">
@@ -191,6 +202,17 @@ export default function InstalledIndexersTable({
                                                 {!indexer.isNative && (
                                                     <Badge variant="warning" size="sm">Proxy</Badge>
                                                 )}
+                                                {indexer.health ? (
+                                                    indexer.health.is_healthy ? (
+                                                        <span title={`Tested: ${new Date(indexer.health.last_tested).toLocaleString()}`}>
+                                                            <Badge variant="success" size="sm">Healthy</Badge>
+                                                        </span>
+                                                    ) : (
+                                                        <span title={indexer.health.error_message || 'Failing'}>
+                                                            <Badge variant="danger" size="sm">Failing</Badge>
+                                                        </span>
+                                                    )
+                                                ) : null}
                                                 {indexer.tags?.map((tag: string) => (
                                                     <span key={tag}>
                                                         <Badge variant="neutral" size="sm">
