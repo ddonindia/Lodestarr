@@ -276,8 +276,14 @@ async fn main() -> Result<()> {
         EnvFilter::new(cli.log_level.as_filter())
     };
 
+    let log_buffer = crate::server::log_buffer::LogBuffer::new(1000);
+    let log_layer = crate::server::log_buffer::LogBufferLayer {
+        buffer: log_buffer.clone(),
+    };
+
     tracing_subscriber::registry()
         .with(fmt::layer().with_target(false).with_thread_ids(false))
+        .with(log_layer)
         .with(filter)
         .init();
 
@@ -398,7 +404,9 @@ async fn main() -> Result<()> {
             output,
             magnet,
         }) => handle_download_command(url, output, magnet, &get_clients).await?,
-        Some(Commands::Serve { host, port }) => server::start_server(config, &host, port).await?,
+        Some(Commands::Serve { host, port }) => {
+            server::start_server(config, &host, port, Some(log_buffer)).await?;
+        }
         None => {
             let mut app = tui::App::new(config)?;
             return app.run().await;

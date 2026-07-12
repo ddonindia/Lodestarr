@@ -227,3 +227,27 @@ pub(super) async fn clear_all(State(state): State<AppState>) -> impl IntoRespons
     )
         .into_response()
 }
+
+pub(super) async fn get_logs(State(state): State<AppState>) -> impl IntoResponse {
+    if let Some(ref buffer) = state.log_buffer {
+        let logs = buffer.get_logs();
+        Json(logs).into_response()
+    } else {
+        (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "Log buffer not enabled",
+        )
+            .into_response()
+    }
+}
+
+pub(super) async fn check_update(State(state): State<AppState>) -> impl IntoResponse {
+    match state.update_checker.check_for_updates().await {
+        Ok(info) => Json(info).into_response(),
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Update check failed: {}", e),
+        )
+            .into_response(),
+    }
+}

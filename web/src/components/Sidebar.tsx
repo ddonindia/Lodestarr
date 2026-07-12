@@ -1,6 +1,6 @@
 import { LayoutDashboard, Search, Database, Settings, Activity, Heart } from 'lucide-react';
 
-export type View = 'dashboard' | 'search' | 'indexers' | 'activity' | 'settings';
+export type View = 'dashboard' | 'search' | 'indexers' | 'activity' | 'logs' | 'settings';
 
 interface SidebarProps {
     currentView: View;
@@ -13,6 +13,7 @@ export default function Sidebar({ currentView, setView }: SidebarProps) {
         { id: 'search', label: 'Search', icon: <Search size={20} /> },
         { id: 'indexers', label: 'Indexers', icon: <Database size={20} /> },
         { id: 'activity', label: 'Activity', icon: <Activity size={20} /> },
+        { id: 'logs', label: 'Logs', icon: <Activity size={20} /> },
         { id: 'settings', label: 'Settings', icon: <Settings size={20} /> },
     ];
 

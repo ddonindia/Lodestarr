@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Activity, Database, Zap, TrendingUp, RefreshCw, TestTube, HardDrive, Cpu } from 'lucide-react';
+import { Activity, Database, Zap, TrendingUp, RefreshCw, TestTube, HardDrive, Cpu, AlertCircle, ArrowRight } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardTitle, Button, Badge, Spinner } from './ui';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
@@ -23,16 +23,36 @@ interface StatsResponse {
     recent_searches: SearchLog[];
 }
 
+interface UpdateInfo {
+    current_version: string;
+    latest_version: string | null;
+    update_available: boolean;
+    release_url: string | null;
+}
+
 export default function Dashboard() {
     const [stats, setStats] = useState<StatsResponse | null>(null);
+    const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [testing, setTesting] = useState(false);
 
     useEffect(() => {
         loadStats();
+        checkUpdates();
         const interval = setInterval(loadStats, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    const checkUpdates = async () => {
+        try {
+            const res = await fetch('/api/update-check');
+            if (res.ok) {
+                setUpdateInfo(await res.json());
+            }
+        } catch (err) {
+            console.error('Failed to check for updates', err);
+        }
+    };
 
     const loadStats = async () => {
         setLoading(true);
@@ -92,6 +112,32 @@ export default function Dashboard() {
 
     return (
         <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
+            {updateInfo?.update_available && (
+                <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-accent/20 p-2 rounded-full">
+                            <AlertCircle className="w-5 h-5 text-accent" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-accent">Update Available</h3>
+                            <p className="text-sm text-accent/80">
+                                Lodestarr version {updateInfo.latest_version} is available. You are running {updateInfo.current_version}.
+                            </p>
+                        </div>
+                    </div>
+                    {updateInfo.release_url && (
+                        <a
+                            href={updateInfo.release_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-md hover:bg-accent/90 transition text-sm font-medium"
+                        >
+                            Release Notes <ArrowRight className="w-4 h-4" />
+                        </a>
+                    )}
+                </div>
+            )}
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
                 <StatCard
                     title="Total Indexers"

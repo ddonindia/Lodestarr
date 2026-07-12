@@ -8,10 +8,11 @@ import Dashboard from './components/Dashboard';
 import Indexers from './components/NativeIndexers'; // Using NativeIndexers as main Indexers view
 import Settings from './components/Settings';
 import RecentActivity from './components/RecentActivity';
+import Logs from './components/Logs';
 import Sidebar from './components/Sidebar';
 
 function App() {
-  const [view, setView] = useState<'dashboard' | 'search' | 'indexers' | 'settings' | 'activity'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'search' | 'indexers' | 'settings' | 'activity' | 'logs'>('dashboard');
   const { settings, setColorMode, resolvedMode } = useTheme();
 
   const toggleTheme = () => {
@@ -70,6 +71,7 @@ function App() {
             {view === 'indexers' && <Indexers />}
             {view === 'settings' && <Settings />}
             {view === 'activity' && <RecentActivity />}
+            {view === 'logs' && <Logs />}
           </div>
         </div>
       </main>

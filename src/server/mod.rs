@@ -12,7 +12,9 @@ mod api_info;
 mod api_native;
 mod api_settings;
 mod indexer_filter;
+pub mod log_buffer;
 mod static_files;
+pub mod update_checker;
 
 use crate::config::Config;
 use crate::indexer::{IndexerDownloader, IndexerManager};
@@ -31,7 +33,7 @@ use api_clients::*;
 use api_indexers::*;
 use api_info::{
     api_info, clear_all, clear_downloads, clear_stats, get_downloaded_links, get_downloads,
-    get_history, get_history_results, get_stats,
+    get_history, get_history_results, get_logs, get_stats,
 };
 use api_native::*;
 use api_settings::*;
@@ -46,10 +48,17 @@ pub struct AppState {
     pub db_pool: crate::db::DbPool,
     /// Cached list of available indexers from GitHub (loaded at startup, refreshed on demand)
     pub cached_github_indexers: Arc<RwLock<Vec<crate::indexer::AvailableIndexer>>>,
+    pub log_buffer: Option<log_buffer::LogBuffer>,
+    pub update_checker: Arc<update_checker::UpdateChecker>,
 }
 
 /// Start the web server
-pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Result<()> {
+pub async fn start_server(
+    config: Config,
+    host: &str,
+    port: u16,
+    log_buffer: Option<log_buffer::LogBuffer>,
+) -> anyhow::Result<()> {
     // Initialize native indexer manager
     let proxy_url = config.proxy_url.as_deref();
     let native_manager = IndexerManager::new(proxy_url);
@@ -123,13 +132,17 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
         native_indexers: Arc::new(RwLock::new(native_manager)),
         db_pool,
         cached_github_indexers: Arc::new(RwLock::new(github_indexers)),
+        log_buffer,
+        update_checker: Arc::new(update_checker::UpdateChecker::new()),
     };
 
     let app = Router::new()
         // API Endpoints
         .route("/api/info", get(api_info))
+        .route("/api/update-check", get(api_info::check_update))
         .route("/api/clear-all", delete(clear_all))
         .route("/api/stats", get(get_stats).delete(clear_stats))
+        .route("/api/logs", get(get_logs))
         .route("/api/history", get(get_history))
         .route("/api/history/{key}", get(get_history_results))
         .route("/api/downloads", get(get_downloads).delete(clear_downloads))
@@ -188,7 +201,8 @@ pub async fn start_server(config: Config, host: &str, port: u16) -> anyhow::Resu
         )
         .route(
             "/api/settings/proxy",
-            axum::routing::get(api_settings::get_proxy_config).post(api_settings::save_proxy_config),
+            axum::routing::get(api_settings::get_proxy_config)
+                .post(api_settings::save_proxy_config),
         )
         .route(
             "/api/settings/cache_ttl",
