@@ -29,6 +29,8 @@ pub struct IndexerConfig {
     pub name: String,
     pub url: String,
     pub apikey: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -119,11 +121,22 @@ impl Config {
         Ok(self.get_indexers_path()?.join("active").join("native"))
     }
 
-    pub fn add_indexer(&mut self, name: String, url: String, apikey: Option<String>) {
+    pub fn add_indexer(
+        &mut self,
+        name: String,
+        url: String,
+        apikey: Option<String>,
+        tags: Vec<String>,
+    ) {
         // Remove existing if name matches
         self.indexers.retain(|i| i.name != name);
 
-        self.indexers.push(IndexerConfig { name, url, apikey });
+        self.indexers.push(IndexerConfig {
+            name,
+            url,
+            apikey,
+            tags,
+        });
     }
 
     pub fn remove_indexer(&mut self, name: &str) -> bool {
@@ -156,7 +169,12 @@ mod tests {
     #[test]
     fn test_add_indexer() {
         let mut config = Config::default();
-        config.add_indexer("Test".to_string(), "http://test.com".to_string(), None);
+        config.add_indexer(
+            "Test".to_string(),
+            "http://test.com".to_string(),
+            None,
+            vec![],
+        );
 
         assert_eq!(config.indexers.len(), 1);
         assert_eq!(config.indexers[0].name, "Test");
@@ -166,23 +184,40 @@ mod tests {
     #[test]
     fn test_add_indexer_overwrite() {
         let mut config = Config::default();
-        config.add_indexer("Test".to_string(), "http://test.com".to_string(), None);
+        config.add_indexer(
+            "Test".to_string(),
+            "http://test.com".to_string(),
+            None,
+            vec![],
+        );
         config.add_indexer(
             "Test".to_string(),
             "http://updated.com".to_string(),
             Some("key".to_string()),
+            vec!["tag1".to_string()],
         );
 
         assert_eq!(config.indexers.len(), 1);
         assert_eq!(config.indexers[0].url, "http://updated.com");
         assert_eq!(config.indexers[0].apikey.as_deref(), Some("key"));
+        assert_eq!(config.indexers[0].tags, vec!["tag1".to_string()]);
     }
 
     #[test]
     fn test_remove_indexer() {
         let mut config = Config::default();
-        config.add_indexer("Test1".to_string(), "http://t1.com".to_string(), None);
-        config.add_indexer("Test2".to_string(), "http://t2.com".to_string(), None);
+        config.add_indexer(
+            "Test1".to_string(),
+            "http://t1.com".to_string(),
+            None,
+            vec![],
+        );
+        config.add_indexer(
+            "Test2".to_string(),
+            "http://t2.com".to_string(),
+            None,
+            vec![],
+        );
 
         assert!(config.remove_indexer("Test1"));
         assert_eq!(config.indexers.len(), 1);

@@ -27,6 +27,7 @@ pub struct AddIndexerParams {
     pub name: String,
     pub url: String,
     pub apikey: Option<String>,
+    pub tags: Option<Vec<String>>,
 }
 
 pub(super) async fn add_indexer_api(
@@ -42,7 +43,8 @@ pub(super) async fn add_indexer_api(
         return (StatusCode::BAD_REQUEST, "Name cannot be empty").into_response();
     }
     let mut config = state.config.write().await;
-    config.add_indexer(payload.name, payload.url, payload.apikey);
+    let tags = payload.tags.unwrap_or_default();
+    config.add_indexer(payload.name, payload.url, payload.apikey, tags);
     if let Err((status, msg)) = save_config_or_error(&config) {
         return (status, msg).into_response();
     }
@@ -74,7 +76,8 @@ pub(super) async fn edit_indexer_api(
     }
 
     // Add updated one
-    config.add_indexer(payload.name, payload.url, payload.apikey);
+    let tags = payload.tags.unwrap_or_default();
+    config.add_indexer(payload.name, payload.url, payload.apikey, tags);
     if let Err((status, msg)) = save_config_or_error(&config) {
         return (status, msg).into_response();
     }

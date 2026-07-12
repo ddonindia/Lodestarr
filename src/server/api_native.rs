@@ -111,6 +111,7 @@ pub(super) struct LocalIndexerInfo {
     legacylinks: Vec<String>,
     categories: Vec<i32>,
     enabled: bool,
+    tags: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -138,6 +139,18 @@ pub(super) async fn list_local_indexers(
             legacylinks: def.legacylinks.clone(),
             categories: def.extract_categories(),
             enabled: config.is_enabled(&def.id),
+            tags: config
+                .native_settings
+                .get(&def.id)
+                .and_then(|settings| settings.get("_tags"))
+                .map(|tags_str| {
+                    tags_str
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect()
+                })
+                .unwrap_or_default(),
         })
         .collect();
 

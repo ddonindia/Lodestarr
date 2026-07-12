@@ -7,6 +7,7 @@ interface IndexerFormData {
     name: string;
     url: string;
     apikey: string;
+    tags: string;
 }
 
 interface AddIndexerFormProps {
@@ -14,7 +15,7 @@ interface AddIndexerFormProps {
 }
 
 export default function AddIndexerForm({ onSuccess }: AddIndexerFormProps) {
-    const [form, setForm] = useState<IndexerFormData>({ name: '', url: '', apikey: '' });
+    const [form, setForm] = useState<IndexerFormData>({ name: '', url: '', apikey: '', tags: '' });
     const [testing, setTesting] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -50,17 +51,21 @@ export default function AddIndexerForm({ onSuccess }: AddIndexerFormProps) {
         }
         setSaving(true);
         try {
+            const payload = {
+                ...form,
+                tags: form.tags.split(',').map(s => s.trim()).filter(Boolean)
+            };
             const res = await fetch('/api/settings/indexer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form)
+                body: JSON.stringify(payload)
             });
             if (!res.ok) {
                 const txt = await res.text();
                 throw new Error(txt || 'Failed to add indexer');
             }
             toast.success('Indexer added successfully');
-            setForm({ name: '', url: '', apikey: '' });
+            setForm({ name: '', url: '', apikey: '', tags: '' });
             onSuccess();
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to add indexer';
@@ -120,6 +125,19 @@ export default function AddIndexerForm({ onSuccess }: AddIndexerFormProps) {
                                     placeholder="••••••••••••"
                                     value={form.apikey}
                                     onChange={e => setForm({ ...form, apikey: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                                    Tags <span className="opacity-50 text-xs">(Optional, comma-separated)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm"
+                                    placeholder="e.g. movies, 4k, private"
+                                    value={form.tags}
+                                    onChange={e => setForm({ ...form, tags: e.target.value })}
                                 />
                             </div>
 

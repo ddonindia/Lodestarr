@@ -20,7 +20,7 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
     const [definitions, setDefinitions] = useState<IndexerSetting[]>([]);
 
     // For Proxied Indexers
-    const [proxiedForm, setProxiedForm] = useState({ url: '', apikey: '' });
+    const [proxiedForm, setProxiedForm] = useState({ url: '', apikey: '', tags: '' });
 
     // Test state
     const [testing, setTesting] = useState(false);
@@ -35,7 +35,8 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                 // Pre-fill for proxied
                 setProxiedForm({
                     url: indexer.url || '', // Passed from parent if available
-                    apikey: '' // Don't show API key for security
+                    apikey: '', // Don't show API key for security
+                    tags: indexer.tags?.join(', ') || ''
                 });
             }
             setTestResults(null);
@@ -57,6 +58,7 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                     '_timeout': '30',
                     '_resultLimit': '100',
                     '_mirror': '0',
+                    '_tags': indexer.tags?.join(', ') || '',
                     ...savedValues
                 });
             } else {
@@ -99,7 +101,8 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                     body: JSON.stringify({
                         name: indexer.name, // Name logic if we allow renaming? For now keep same
                         url: proxiedForm.url,
-                        apikey: proxiedForm.apikey || undefined // Only send if changed
+                        apikey: proxiedForm.apikey || undefined, // Only send if changed
+                        tags: proxiedForm.tags.split(',').map(s => s.trim()).filter(Boolean)
                     })
                 });
             }
@@ -205,16 +208,31 @@ export default function EditIndexerModal({ isOpen, onClose, indexer, onSave }: P
                     ) : (
                         <>
                             {indexer.isNative ? (
-                                <IndexerSettingsForm
-                                    definitions={definitions}
-                                    settings={settings}
-                                    links={indexer.links}
-                                    onSettingsChange={setSettings}
-                                />
+                                <div className="space-y-4">
+                                    <IndexerSettingsForm
+                                        definitions={definitions}
+                                        settings={settings}
+                                        links={indexer.links}
+                                        onSettingsChange={setSettings}
+                                    />
+                                    <div>
+                                        <label className="block text-sm font-medium text-neutral-300 mb-1">
+                                            Tags <span className="opacity-50 font-normal">(Optional, comma-separated)</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={settings['_tags'] || ''}
+                                            onChange={(e) => setSettings({ ...settings, '_tags': e.target.value })}
+                                            placeholder="e.g. movies, 4k"
+                                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-white"
+                                        />
+                                    </div>
+                                </div>
                             ) : (
                                 <ProxiedIndexerForm
                                     url={proxiedForm.url}
                                     apikey={proxiedForm.apikey}
+                                    tags={proxiedForm.tags}
                                     onChange={setProxiedForm}
                                 />
                             )}

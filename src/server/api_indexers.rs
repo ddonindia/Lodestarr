@@ -19,6 +19,7 @@ pub(super) struct IndexerDefinition {
     name: String,
     url: String,
     enabled: bool,
+    tags: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -36,6 +37,7 @@ pub(super) async fn list_indexers(State(state): State<AppState>) -> Json<Indexer
             name: idx.name.clone(),
             url: idx.url.clone(),
             enabled: config.is_enabled(&idx.name),
+            tags: idx.tags.clone(),
         })
         .collect();
 

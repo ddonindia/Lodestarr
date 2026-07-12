@@ -133,6 +133,13 @@ export default function InstalledIndexersTable({
                                     {!indexer.isNative && (
                                         <Badge variant="warning" size="sm">Proxy</Badge>
                                     )}
+                                    {indexer.tags?.map((tag: string) => (
+                                        <span key={tag}>
+                                            <Badge variant="neutral" size="sm">
+                                                {tag}
+                                            </Badge>
+                                        </span>
+                                    ))}
                                 </div>
                                 <div className="text-xs text-neutral-500 mt-1 line-clamp-2">
                                     {indexer.description}
@@ -184,6 +191,13 @@ export default function InstalledIndexersTable({
                                                 {!indexer.isNative && (
                                                     <Badge variant="warning" size="sm">Proxy</Badge>
                                                 )}
+                                                {indexer.tags?.map((tag: string) => (
+                                                    <span key={tag}>
+                                                        <Badge variant="neutral" size="sm">
+                                                            {tag}
+                                                        </Badge>
+                                                    </span>
+                                                ))}
                                             </div>
                                             <div className="text-xs text-neutral-500 line-clamp-1 max-w-md">
                                                 {indexer.description}

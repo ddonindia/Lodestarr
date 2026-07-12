@@ -16,6 +16,7 @@ export interface LocalIndexer {
     legacylinks: string[];
     isNative: true;
     enabled: boolean;
+    tags?: string[];
 }
 
 export interface ProxiedIndexer {
@@ -25,6 +26,7 @@ export interface ProxiedIndexer {
     language: string;
     isNative: false;
     enabled: boolean;
+    tags?: string[];
 }
 
 export interface UnifiedIndexer {
@@ -38,4 +40,5 @@ export interface UnifiedIndexer {
     legacylinks?: string[];
     url?: string;
     enabled: boolean;
+    tags?: string[];
 }
