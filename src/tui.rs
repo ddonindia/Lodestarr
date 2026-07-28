@@ -361,10 +361,10 @@ impl App {
         match self.sort_mode {
             SortMode::Seeders => self
                 .results
-                .sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0))),
+                .sort_by_key(|b| std::cmp::Reverse(b.seeders.unwrap_or(0))),
             SortMode::Size => self
                 .results
-                .sort_by(|a, b| b.size.unwrap_or(0).cmp(&a.size.unwrap_or(0))),
+                .sort_by_key(|b| std::cmp::Reverse(b.size.unwrap_or(0))),
             SortMode::Indexer => self.results.sort_by(|a, b| a.indexer.cmp(&b.indexer)),
         }
     }

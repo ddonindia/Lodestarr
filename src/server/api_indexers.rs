@@ -189,7 +189,7 @@ pub(super) async fn search_api(
     );
 
     // Sort by seeders
-    all_results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
+    all_results.sort_by_key(|b| std::cmp::Reverse(b.seeders.unwrap_or(0)));
 
     Json(all_results).into_response()
 }
@@ -725,7 +725,7 @@ async fn torznab_all_indexers(
             let mut all_results: Vec<TorrentResult> = results_lists.into_iter().flatten().collect();
 
             // Sort by seeders (descending)
-            all_results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
+            all_results.sort_by_key(|b| std::cmp::Reverse(b.seeders.unwrap_or(0)));
 
             // Apply offset pagination (Jackett parity)
             let offset = params.offset.unwrap_or(0) as usize;

@@ -432,7 +432,7 @@ pub(super) async fn search_native(
     }
 
     // Sort by seeders
-    all_results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
+    all_results.sort_by_key(|b| std::cmp::Reverse(b.seeders.unwrap_or(0)));
 
     // Record stat
     let duration = start.elapsed();

@@ -40,7 +40,7 @@ pub async fn perform_search(
 }
 
 fn sort_results(results: &mut [torznab::TorrentResult]) {
-    results.sort_by(|a, b| b.seeders.unwrap_or(0).cmp(&a.seeders.unwrap_or(0)));
+    results.sort_by_key(|b| std::cmp::Reverse(b.seeders.unwrap_or(0)));
 }
 
 #[cfg(test)]

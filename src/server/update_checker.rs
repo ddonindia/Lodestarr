@@ -42,10 +42,10 @@ impl UpdateChecker {
         // Check cache (1 hour TTL)
         {
             let cache = self.cached_info.read().await;
-            if let Some((info, time)) = &*cache {
-                if time.elapsed() < Duration::from_secs(3600) {
-                    return Ok(info.clone());
-                }
+            if let Some((info, time)) = &*cache
+                && time.elapsed() < Duration::from_secs(3600)
+            {
+                return Ok(info.clone());
             }
         }
 
